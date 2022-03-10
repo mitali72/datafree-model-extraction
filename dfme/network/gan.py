@@ -1,7 +1,9 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import ipdb
+use_gpu = True if torch.cuda.is_available() else False
 
 class Flatten(nn.Module):
     def __init__(self):
@@ -164,4 +166,28 @@ class GeneratorB(nn.Module):
         proj = proj.view(proj.shape[0], -1, self.init_size[0], self.init_size[1])
         output = self.main(proj)
         return output
+
+class GeneratorImageOurs(nn.Module):
+    '''
+    Conditional Generator
+    '''
+    def __init__(self, img_size=128):
+        super().__init__()
+        self.img_size = img_size
+        self.model = torch.hub.load('facebookresearch/pytorch_GAN_zoo:hub',
+                       'PGAN', model_name='DTD',
+                       pretrained=True, useGPU=use_gpu)
+        self.modelG = self.model.netG.to("cuda:0")
+
+
+    def forward(self,z):
+        #Generate images batch*C*H*W
+        output = self.modelG(z)[:,:,:32,:32]
+        # output = output.unsqueeze(1)
+        return output
+       
+
+        
+
+
 

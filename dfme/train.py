@@ -352,9 +352,8 @@ def main():
     
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
     
-    generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
-
-
+    # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
+    generator = network.gan.GeneratorImageOurs()
     
     student = student.to(device)
     generator = generator.to(device)
