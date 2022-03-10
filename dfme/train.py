@@ -79,7 +79,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             ## APPOX GRADIENT
             approx_grad_wrt_x, loss_G = estimate_gradient_objective(args, teacher, student, fake, 
                                                 epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, 
-                                                device=device, pre_x=True)
+                                                device=device, pre_x=False)
 
             fake.backward(approx_grad_wrt_x)
                 
@@ -354,7 +354,6 @@ def main():
     
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
     generator = network.gan.GeneratorImageOurs()
-    
     student = student.to(device)
     generator = generator.to(device)
 

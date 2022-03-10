@@ -5,3 +5,4 @@ pillow
 scikit-learn
 matplotlib
 tqdm
+ipdb
