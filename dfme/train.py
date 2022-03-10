@@ -121,12 +121,12 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                     f.write("%d,%f,%f\n"%(epoch, loss_G, loss_S))
 
 
-            if args.rec_grad_norm and i == 0:
+            # if args.rec_grad_norm and i == 0:
 
-                G_grad_norm, S_grad_norm = compute_grad_norms(generator, student)
-                if i == 0:
-                    with open(args.log_dir + "/norm_grad.csv", "a") as f:
-                        f.write("%d,%f,%f,%f\n"%(epoch, G_grad_norm, S_grad_norm, x_true_grad))
+            #     G_grad_norm, S_grad_norm = compute_grad_norms(generator, student)
+            #     if i == 0:
+            #         with open(args.log_dir + "/norm_grad.csv", "a") as f:
+            #             f.write("%d,%f,%f,%f\n"%(epoch, G_grad_norm, S_grad_norm, x_true_grad))
                     
 
         # update query budget
@@ -338,15 +338,15 @@ def main():
     teacher = teacher.to(device)
     myprint("Teacher restored from %s"%(args.ckpt)) 
     print(f"\n\t\tTraining with {args.model} as a Target\n") 
-    correct = 0
-    with torch.no_grad():
-        for i, (data, target) in enumerate(test_loader):
-            data, target = data.to(device), target.to(device)
-            output = teacher(data)
-            pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
-            correct += pred.eq(target.view_as(pred)).sum().item()
-    accuracy = 100. * correct / len(test_loader.dataset)
-    print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
+    # correct = 0
+    # with torch.no_grad():
+    #     for i, (data, target) in enumerate(test_loader):
+    #         data, target = data.to(device), target.to(device)
+    #         output = teacher(data)
+    #         pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
+    #         correct += pred.eq(target.view_as(pred)).sum().item()
+    # accuracy = 100. * correct / len(test_loader.dataset)
+    # print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
     
     
     
