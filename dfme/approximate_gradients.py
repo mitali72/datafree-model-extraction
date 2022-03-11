@@ -1,4 +1,6 @@
 import numpy as np
+import tensorflow as tf
+import tensorflow_hub as hub
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,7 +10,7 @@ import network
 from tqdm import tqdm
 import torchvision.models as models
 from time import time
-
+from functions import tf_to_torch, torch_to_tf
 # from cifar10_models import *
 
 
@@ -21,7 +23,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
         raise ValueError(args.G_activation)
 
     clone_model.eval()
-    victim_model.eval()
+    # victim_model.eval()
     with torch.no_grad():
         # Sample unit noise vector
         N = x.size(0)
@@ -52,7 +54,23 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             pts = evaluation_points[i * max_number_points: (i+1) * max_number_points]
             pts = pts.to(device)
 
-            pred_victim_pts = victim_model(pts).detach()
+            print("*"*10, pts.shape, "*"*10);
+            #changing pts to tf tensor
+
+            pts_tf = torch_to_tf(pts)
+
+            # pts_np = pts.cpu().numpy()
+            # pts_np = pts_np.reshape(pts_np.shape[0], pts_np.shape[2], pts_np.shape[3], pts_np.shape[1])
+            # pts_np = np.expand_dims(pts_np, axis=0)
+            # pts_tf = tf.convert_to_tensor(pts_np, dtype=tf.float32)
+
+            pred_victim_pts_tf = victim_model(pts_tf)
+
+            #changing to pytorch tensor
+            pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
+            pred_victim_pts = pred_victim_pts.to(device)
+            # pred_victim_pts = torch.tensor(pred_victim_pts_tf.numpy())
+
             pred_clone_pts = clone_model(pts)
 
             pred_victim.append(pred_victim_pts)
@@ -121,8 +139,23 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
     if pre_x:
         x_ = args.G_activation(x_)
 
+    #changing x_ to tf tensor
 
-    pred_victim = victim_model(x_)
+    x_tf = torch_to_tf(x_)
+    # x_np = x_.detach().cpu().numpy()
+    # x_np = x_np.reshape(x_np.shape[0], x_np.shape[2], x_np.shape[3], x_np.shape[1])
+    # x_np = np.expand_dims(x_np, axis=0)
+    # x_tf = tf.convert_to_tensor(x_np, dtype=tf.float32)
+            
+    pred_victim_tf = victim_model(x_tf)
+
+
+    #changing to pytorch tensor
+    pred_victim = tf_to_torch(pred_victim_tf)
+    pred_victim = pred_victim.to(device)
+    # pred_victim = torch.tensor(pred_victim_tf.numpy())
+    # pred_victim = pred_victim.to(device);
+
     pred_clone = clone_model(x_)
 
     if args.loss == "l1":

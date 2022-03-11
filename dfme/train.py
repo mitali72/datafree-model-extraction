@@ -1,5 +1,7 @@
 from __future__ import print_function
 import argparse, ipdb, json
+import tensorflow as tf
+import tensorflow_hub as hub
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -16,7 +18,7 @@ from approximate_gradients import *
 
 import torchvision.models as models
 from my_utils import *
-
+from functions import *
 
 print("torch version", torch.__version__)
 
@@ -57,7 +59,7 @@ def generator_loss(args, s_logit, t_logit,  z = None, z_logit = None, reduction=
 def train(args, teacher, student, generator, device, optimizer, epoch):
     """Main Loop for one epoch of Training Generator and Student"""
     global file
-    teacher.eval()
+    # teacher.eval()
     student.train()
     
     optimizer_S,  optimizer_G = optimizer
@@ -93,8 +95,26 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             fake = generator(z).detach()
             optimizer_S.zero_grad()
 
-            with torch.no_grad(): 
-                t_logit = teacher(fake)
+            # with torch.no_grad(): 
+            # converting pyotrch tensor to tf tensor
+
+            fake_tf = torch_to_tf(fake)
+
+            # fake_np = fake.cpu().numpy()
+            # fake_np = fake_np.reshape(fake_np.shape[0], fake_np.shape[2], fake_np.shape[3], fake_np.shape[1])
+            # fake_np = np.expand_dims(fake_np, axis=0)
+            # fake_tf = tf.convert_to_tensor(fake_np, dtype=tf.float32)
+
+            tf_logit = teacher(fake_tf)
+            
+            # print("*"*10, tf_logit.shape, "*"*10);
+
+            # tf tensor 'tf_logit' to pytorch tensor 't_logit'
+            # t_logit = torch.tensor(tf_logit.numpy())
+            # t_logit = t_logit.to(device)
+
+            t_logit = tf_to_torch(tf_logit)
+            t_logit = t_logit.to(device)
 
             # Correction for the fake logits
             if args.loss == "l1" and args.no_logits:
@@ -104,7 +124,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                 elif args.logit_correction == 'mean':
                     t_logit -= t_logit.mean(dim=1).view(-1, 1).detach()
 
-
+            
             s_logit = student(fake)
 
 
@@ -320,24 +340,25 @@ def main():
     args.normalization_coefs = None
     args.G_activation = torch.tanh
 
-    num_classes = 10 if args.dataset in ['cifar10', 'svhn'] else 100
+    # num_classes = 10 if args.dataset in ['cifar10', 'svhn'] else 100
+    num_classes = 600;
     args.num_classes = num_classes
 
-    if args.model == 'resnet34_8x':
-        teacher = network.resnet_8x.ResNet34_8x(num_classes=num_classes)
-        if args.dataset == 'svhn':
-            print("Loading SVHN TEACHER")
-            args.ckpt = 'checkpoint/teacher/svhn-resnet34_8x.pt'
-        teacher.load_state_dict( torch.load( args.ckpt, map_location=device) )
-    else:
-        teacher = get_classifier(args.model, pretrained=True, num_classes=args.num_classes)
+    #if args.model == 'resnet34_8x':
+    #    teacher = network.resnet_8x.ResNet34_8x(num_classes=num_classes)
+    #    if args.dataset == 'svhn':
+    #        print("Loading SVHN TEACHER")
+    #        args.ckpt = 'checkpoint/teacher/svhn-resnet34_8x.pt'
+    #    teacher.load_state_dict( torch.load( args.ckpt, map_location=device) )
+    #else:
+    #    teacher = get_classifier(args.model, pretrained=True, num_classes=args.num_classes)
     
     
 
-    teacher.eval()
-    teacher = teacher.to(device)
-    myprint("Teacher restored from %s"%(args.ckpt)) 
-    print(f"\n\t\tTraining with {args.model} as a Target\n") 
+    # teacher.eval()
+    # teacher = teacher.to(device)
+    # myprint("Teacher restored from %s"%(args.ckpt)) 
+    # print(f"\n\t\tTraining with {args.model} as a Target\n") 
     # correct = 0
     # with torch.no_grad():
     #     for i, (data, target) in enumerate(test_loader):
@@ -348,7 +369,20 @@ def main():
     # accuracy = 100. * correct / len(test_loader.dataset)
     # print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
     
-    
+    # Loading Teacher model from tensorflow hub 
+    hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
+
+    encoder = hub.KerasLayer(hub_url, trainable=False)
+
+    inputs = tf.keras.layers.Input(
+        shape=[None, None, None, 3],
+        dtype=tf.float32,
+        name='image')
+
+    # [batch_size, 600]
+    outputs = encoder(dict(image=inputs))
+
+    teacher = tf.keras.Model(inputs, outputs, name='movinet')
     
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
     
