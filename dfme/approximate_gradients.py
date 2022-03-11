@@ -54,7 +54,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             pts = evaluation_points[i * max_number_points: (i+1) * max_number_points]
             pts = pts.to(device)
 
-            print("*"*10, pts.shape, "*"*10);
+            # print("*"*10, pts.shape, "*"*10);
             #changing pts to tf tensor
 
             pts_tf = torch_to_tf(pts)
