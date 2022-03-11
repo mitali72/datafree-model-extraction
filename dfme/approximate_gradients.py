@@ -56,7 +56,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
 
             # print("*"*10, pts.shape, "*"*10);
             #changing pts to tf tensor
-            print("*"*10, pts.shape, "*"*10)
+            # print("*"*10, pts.shape, "*"*10)
             pts_tf = torch_to_tf(pts)
 
             # pts_np = pts.cpu().numpy()
@@ -70,7 +70,9 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
             pred_victim_pts = pred_victim_pts.to(device)
             # pred_victim_pts = torch.tensor(pred_victim_pts_tf.numpy())
-
+            #**********************
+            pts =torch.squeeze(pts)
+            #**********************
             pred_clone_pts = clone_model(pts)
 
             pred_victim.append(pred_victim_pts)
@@ -109,7 +111,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
 
         # Compute difference following each direction
         differences = loss_values[:, :-1] - loss_values[:, -1].view(-1, 1)
-        differences = differences.view(-1, m, 1, 1, 1)
+        differences = differences.view(-1, m, 1, 1, 1, 1)
 
         # Formula for Forward Finite Differences
         gradient_estimates = 1 / epsilon * differences * u[:, :-1]
@@ -117,9 +119,9 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             gradient_estimates *= dim            
 
         if args.loss == "kl":
-            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, C, S, S) 
+            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, 1, C, S, S) 
         else:
-            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, C, S, S) / (num_classes * N) 
+            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, 1, C, S, S) / (num_classes * N) 
 
         clone_model.train()
         loss_G = loss_values[:, -1].mean()
@@ -155,6 +157,10 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
     pred_victim = pred_victim.to(device)
     # pred_victim = torch.tensor(pred_victim_tf.numpy())
     # pred_victim = pred_victim.to(device);
+    
+    #*********************
+    x_ = x_[:, 0, :, :, :]
+    #*********************
 
     pred_clone = clone_model(x_)
 

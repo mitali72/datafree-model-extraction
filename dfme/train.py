@@ -124,8 +124,10 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                 elif args.logit_correction == 'mean':
                     t_logit -= t_logit.mean(dim=1).view(-1, 1).detach()
 
-            
-            s_logit = student(fake)
+            #***************
+            fake_n = fake[:,0,:,:,:]
+            #***************
+            s_logit = student(fake_n)
 
 
             loss_S = student_loss(args, s_logit, t_logit)
