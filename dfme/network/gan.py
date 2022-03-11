@@ -181,9 +181,9 @@ class GeneratorImageOurs(nn.Module):
 
 
     def forward(self,z, pre_x = None):
-        #Generate images batch*C*H*W
+        # Generate images batch*C*H*W
         output = self.modelG(z)[:,:,:32,:32]
-        # output = output.unsqueeze(1)
+        output = output.unsqueeze(1)
         return output
        
 
