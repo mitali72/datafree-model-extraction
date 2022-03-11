@@ -27,8 +27,8 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
     with torch.no_grad():
         # Sample unit noise vector
         N = x.size(0)
-        C = x.size(1)
-        S = x.size(2)
+        C = x.size(2)
+        S = x.size(3)
         dim = S**2 * C
 
         u = np.random.randn(N * m * dim).reshape(-1, m, dim) # generate random points from normal distribution
@@ -39,9 +39,9 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
 
             
 
-        u = u.view(-1, m + 1, C, S, S)
+        u = u.view(-1, m + 1, 1, C, S, S)
 
-        evaluation_points = (x.view(-1, 1, C, S, S).cpu() + epsilon * u).view(-1, C, S, S)
+        evaluation_points = (x.view(-1, 1, 1, C, S, S).cpu() + epsilon * u).view(-1, 1, C, S, S)
         if pre_x: 
             evaluation_points = args.G_activation(evaluation_points) # Apply args.G_activation function
 
@@ -56,14 +56,14 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
 
             # print("*"*10, pts.shape, "*"*10);
             #changing pts to tf tensor
-
+            print("*"*10, pts.shape, "*"*10)
             pts_tf = torch_to_tf(pts)
 
             # pts_np = pts.cpu().numpy()
             # pts_np = pts_np.reshape(pts_np.shape[0], pts_np.shape[2], pts_np.shape[3], pts_np.shape[1])
             # pts_np = np.expand_dims(pts_np, axis=0)
             # pts_tf = tf.convert_to_tensor(pts_np, dtype=tf.float32)
-
+            
             pred_victim_pts_tf = victim_model(pts_tf)
 
             #changing to pytorch tensor
