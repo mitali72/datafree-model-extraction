@@ -159,30 +159,31 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
 
 def test(args, student = None, generator = None, device = "cuda", test_loader = None, epoch=0):
-    global file
-    student.eval()
-    generator.eval()
+    # global file
+    # student.eval()
+    # generator.eval()
 
-    test_loss = 0
-    correct = 0
-    with torch.no_grad():
-        for i, (data, target) in enumerate(test_loader):
-            data, target = data.to(device), target.to(device)
-            output = student(data)
+    # test_loss = 0
+    # correct = 0
+    # with torch.no_grad():
+    #     for i, (data, target) in enumerate(test_loader):
+    #         data, target = data.to(device), target.to(device)
+    #         output = student(data)
 
-            test_loss += F.cross_entropy(output, target, reduction='sum').item() # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
-            correct += pred.eq(target.view_as(pred)).sum().item()
+    #         test_loss += F.cross_entropy(output, target, reduction='sum').item() # sum up batch loss
+    #         pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
+    #         correct += pred.eq(target.view_as(pred)).sum().item()
 
-    test_loss /= len(test_loader.dataset)
-    accuracy = 100. * correct / len(test_loader.dataset)
-    myprint('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        accuracy))
-    with open(args.log_dir + "/accuracy.csv", "a") as f:
-        f.write("%d,%f\n"%(epoch, accuracy))
-    acc = correct/len(test_loader.dataset)
-    return acc
+    # test_loss /= len(test_loader.dataset)
+    # accuracy = 100. * correct / len(test_loader.dataset)
+    # myprint('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
+    #     test_loss, correct, len(test_loader.dataset),
+    #     accuracy))
+    # with open(args.log_dir + "/accuracy.csv", "a") as f:
+    #     f.write("%d,%f\n"%(epoch, accuracy))
+    # acc = correct/len(test_loader.dataset)
+    # return acc
+    pass
 
 def compute_grad_norms(generator, student):
     G_grad = []
@@ -218,7 +219,7 @@ def main():
     parser.add_argument('--steps', nargs='+', default = [0.1, 0.3, 0.5], type=float, help = "Percentage epochs at which to take next step")
     parser.add_argument('--scale', type=float, default=3e-1, help = "Fractional decrease in lr")
 
-    parser.add_argument('--dataset', type=str, default='cifar10', choices=['svhn','cifar10'], help='dataset name (default: cifar10)')
+    parser.add_argument('--dataset', type=int, default=400, choices=[400,600], help='kinetics classes (default: 400)')
     parser.add_argument('--data_root', type=str, default='data')
     parser.add_argument('--model', type=str, default='resnet34_8x', choices=classifiers, help='Target model name (default: resnet34_8x)')
     parser.add_argument('--weight_decay', type=float, default=5e-4)
@@ -256,10 +257,10 @@ def main():
 
     parser.add_argument('--store_checkpoints', type=int, default=1)
 
-    parser.add_argument('--student_model', type=str, default='resnet18_8x',
+    parser.add_argument('--student_model', type=str, default='resnet50',
                         help='Student model architecture (default: resnet18_8x)')
 
-
+    parser.add_argument('--num_classes', type=int, default=600)
     args = parser.parse_args()
 
 
@@ -343,8 +344,8 @@ def main():
     args.G_activation = torch.tanh
 
     # num_classes = 10 if args.dataset in ['cifar10', 'svhn'] else 100
-    num_classes = 600;
-    args.num_classes = num_classes
+    # num_classes = 600;
+    # args.num_classes = num_classes
 
     #if args.model == 'resnet34_8x':
     #    teacher = network.resnet_8x.ResNet34_8x(num_classes=num_classes)
