@@ -19,7 +19,7 @@ from approximate_gradients import *
 import torchvision.models as models
 from my_utils import *
 from functions import *
-from swintapi import *
+
 
 print("torch version", torch.__version__)
 
@@ -384,6 +384,7 @@ def main():
         outputs = encoder(dict(image=inputs))
         teacher = tf.keras.Model(inputs, outputs, name='movinet')
     else:
+        from swintapi import SwinT
         # raise "Swin T not implemented yet" #TODO
         teacher = SwinT(device)
 
