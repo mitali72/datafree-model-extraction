@@ -1,15 +1,16 @@
 # from cifar10_models import *
 from approximate_gradients import *
 # import network
-import pytorchvideo
 import pytorchvideo.models.resnet as videoresnet
+import torch
+from stam_pytorch import STAM
 
 def get_classifier(classifier="x3d_m", pretrained=False, num_classes=400):
 
     if "x3d" in classifier:
         model = torch.hub.load('facebookresearch/pytorchvideo', classifier, pretrained=False)
         return model
-    if "resnet" in classifier: 
+    elif "resnet" in classifier: 
         try:
             depth = int(classifier[6:])
         except Exception as e:
@@ -26,6 +27,26 @@ def get_classifier(classifier="x3d_m", pretrained=False, num_classes=400):
             #source: https://github.com/facebookresearch/SlowFast/blob/main/slowfast/utils/checkpoint.py#L142
             pass
         return model
+
+    elif classifier == "stam":
+        model = STAM(
+        dim = 512,
+        image_size = 256,     # size of image
+        patch_size = 32,      # patch size
+        num_frames = 10,       # number of image frames, selected out of video
+        space_depth = 12,     # depth of vision transformer
+        space_heads = 8,      # heads of vision transformer
+        space_mlp_dim = 2048, # feedforward hidden dimension of vision transformer
+        time_depth = 6,       # depth of time transformer (in paper, it was shallower, 6)
+        time_heads = 8,       # heads of time transformer
+        time_mlp_dim = 2048,  # feedforward hidden dimension of time transformer
+        num_classes = num_classes,    # number of output classes
+        space_dim_head = 64,  # space transformer head dimension
+        time_dim_head = 64,   # time transformer head dimension
+        dropout = 0.,         # dropout
+        emb_dropout = 0.      # embedding dropout
+    )
+
     # if classifier == "wrn-28-10":
     #     net =  wrn(
     #                 num_classes=num_classes,
@@ -91,6 +112,7 @@ classifiers = [
     "resnet34",
     "resnet50",
     "resnet101",
+    "stam"
     # "resnet34_8x", # Default DFAD
     # "vgg11",
     # "vgg13",

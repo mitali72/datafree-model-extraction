@@ -6,3 +6,5 @@ scikit-learn
 matplotlib
 tqdm
 ipdb
+stam-pytorch
+pytorchvideo
