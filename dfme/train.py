@@ -336,7 +336,7 @@ def main():
     args.device = device
 
     # Eigen values and vectors of the covariance matrix
-    _, test_loader = get_dataloader(args)
+    # _, test_loader = get_dataloader(args)
 
 
     args.normalization_coefs = None
