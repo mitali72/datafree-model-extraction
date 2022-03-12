@@ -171,22 +171,27 @@ class GeneratorImageOurs(nn.Module):
     '''
     Conditional Generator
     '''
-    def __init__(self, img_size=128):
+    def __init__(self, img_size=128, activation=None):
         super().__init__()
         self.img_size = img_size
         self.model = torch.hub.load('facebookresearch/pytorch_GAN_zoo:hub',
                        'PGAN', model_name='DTD',
                        pretrained=True, useGPU=use_gpu)
         self.modelG = self.model.netG.to("cuda:0")
-
+        if activation is None:
+            raise ValueError("Provide a valid activation function")
+        self.activation = activation
 
     def forward(self,z, pre_x = None):
         # Generate images batch*C*H*W
         output = self.modelG(z)[:,:,:32,:32]
         output = output.unsqueeze(1)
-        return output
-       
-
+        
+        if pre_x :
+            return output
+        else:
+            # img = nn.functional.interpolate(img, scale_factor=2)
+            return self.activation(output)
         
 
 

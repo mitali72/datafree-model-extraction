@@ -29,19 +29,20 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
         N = x.size(0)
         C = x.size(2)
         S = x.size(3)
-        dim = S**2 * C
+        T = x.size(1)
+        dim = S**2 * C * T
 
         u = np.random.randn(N * m * dim).reshape(-1, m, dim) # generate random points from normal distribution
 
         d = np.sqrt(np.sum(u ** 2, axis = 2)).reshape(-1, m, 1)  # map to a uniform distribution on a unit sphere
-        u = torch.Tensor(u / d).view(-1, m, C, S, S)
-        u = torch.cat((u, torch.zeros(N, 1, C, S, S)), dim = 1) # Shape N, m + 1, S^2
+        u = torch.Tensor(u / d).view(-1, m, T, C, S, S)
+        u = torch.cat((u, torch.zeros(N, 1, T, C, S, S)), dim = 1) # Shape N, m + 1, S^2
 
             
 
-        u = u.view(-1, m + 1, 1, C, S, S)
+        u = u.view(-1, m + 1, T, C, S, S)
 
-        evaluation_points = (x.view(-1, 1, 1, C, S, S).cpu() + epsilon * u).view(-1, 1, C, S, S)
+        evaluation_points = (x.view(-1, 1, T, C, S, S).cpu() + epsilon * u).view(-1, T, C, S, S)
         if pre_x: 
             evaluation_points = args.G_activation(evaluation_points) # Apply args.G_activation function
 
