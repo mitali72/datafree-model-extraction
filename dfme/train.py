@@ -1,7 +1,5 @@
 from __future__ import print_function
 import argparse, ipdb, json
-import tensorflow as tf
-import tensorflow_hub as hub
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -375,6 +373,8 @@ def main():
     
     
     if args.num_classes == 600:
+        import tensorflow as tf
+        import tensorflow_hub as hub
         hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
         encoder = hub.KerasLayer(hub_url, trainable=False)
         inputs = tf.keras.layers.Input(
