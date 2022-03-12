@@ -14,7 +14,7 @@ from functions import tf_to_torch, torch_to_tf
 # from cifar10_models import *
 
 
-def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e-7, m = 5, verb=False, num_classes=10, device = "cpu", pre_x=False):
+def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e-7, m = 5, verb=False, num_classes=600, device = "cpu", pre_x=False):
     # Sampling from unit sphere is the method 3 from this website:
     #  http://extremelearning.com.au/how-to-generate-uniformly-random-points-on-n-spheres-and-n-balls/
     #x = torch.Tensor(np.arange(2*1*7*7).reshape(-1, 1, 7, 7))
@@ -58,21 +58,25 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             # print("*"*10, pts.shape, "*"*10);
             #changing pts to tf tensor
             # print("*"*10, pts.shape, "*"*10)
-            pts_tf = torch_to_tf(pts)
+            if num_classes == 600:
+                pts_tf = torch_to_tf(pts)
+                pred_victim_pts_tf = victim_model(pts_tf)
 
-            # pts_np = pts.cpu().numpy()
-            # pts_np = pts_np.reshape(pts_np.shape[0], pts_np.shape[2], pts_np.shape[3], pts_np.shape[1])
-            # pts_np = np.expand_dims(pts_np, axis=0)
-            # pts_tf = tf.convert_to_tensor(pts_np, dtype=tf.float32)
-            
-            pred_victim_pts_tf = victim_model(pts_tf)
+                #changing to pytorch tensor
+                pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
+                pred_victim_pts = pred_victim_pts.to(device)
+            else: 
+                assert num_classes == 400
+                # raise "Swin T not implemented yet" #TODO
+                pred_victim_pts = torch.zeros(N, num_classes)
+                for i in range(N):
+                    pred_victim_pts[i] = victim_model(evaluation_points[i])
+                    
+                
 
-            #changing to pytorch tensor
-            pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
-            pred_victim_pts = pred_victim_pts.to(device)
             # pred_victim_pts = torch.tensor(pred_victim_pts_tf.numpy())
             #**********************
-            pts =torch.squeeze(pts)
+            # pts =torch.squeeze(pts)
             #**********************
             pred_clone_pts = clone_model(pts)
 
@@ -100,7 +104,8 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             loss_fn = F.kl_div
             pred_clone = F.log_softmax(pred_clone, dim=1)
             pred_victim = F.softmax(pred_victim.detach(), dim=1)
-
+        elif args.loss == "W":
+            raise "Find W dist."
         else:
             raise ValueError(args.loss)
 
@@ -120,9 +125,9 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             gradient_estimates *= dim            
 
         if args.loss == "kl":
-            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, 1, C, S, S) 
+            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, T, C, S, S) 
         else:
-            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, 1, C, S, S) / (num_classes * N) 
+            gradient_estimates = gradient_estimates.mean(dim = 1).view(-1, T, C, S, S) / (num_classes * N) 
 
         clone_model.train()
         loss_G = loss_values[:, -1].mean()
@@ -201,76 +206,76 @@ class Args(dict):
 
 
 
-def get_classifier(classifier, pretrained=True, resnet34_8x_file=None, num_classes=10):
-    if classifier == "none":
-        return NullTeacher(num_classes=num_classes)
-    else:
-        raise ValueError("Only Null Teacher should be used")
-    if classifier == 'vgg11_bn':
-        return vgg11_bn(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'vgg13_bn':
-        return vgg13_bn(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'vgg16_bn':
-        return vgg16_bn(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'vgg19_bn':
-        return vgg19_bn(pretrained=pretrained, num_classes=num_classes)
-    if classifier == 'vgg11':
-        return models.vgg11(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'vgg13':
-        return models.vgg13(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'vgg16':
-        return models.vgg16(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'vgg19':
-        return models.vgg19(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'resnet18':
-        return resnet18(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'resnet34':
-        return resnet34(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'resnet50':
-        return resnet50(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'densenet121':
-        return densenet121(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'densenet161':
-        return densenet161(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'densenet169':
-        return densenet169(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'mobilenet_v2':
-        return mobilenet_v2(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'googlenet':
-        return googlenet(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == 'inception_v3':
-        return inception_v3(pretrained=pretrained, num_classes=num_classes)
-    elif classifier == "resnet34_8x":
-        net = network.resnet_8x.ResNet34_8x(num_classes=num_classes)
-        if pretrained:
-            if resnet34_8x_file is not None:
-                net.load_state_dict( torch.load( resnet34_8x_file) )
-            else:
-                raise ValueError("Cannot load pretrained resnet34_8x from here")
+# def get_classifier(classifier, pretrained=True, resnet34_8x_file=None, num_classes=10):
+#     if classifier == "none":
+#         return NullTeacher(num_classes=num_classes)
+#     else:
+#         raise ValueError("Only Null Teacher should be used")
+#     if classifier == 'vgg11_bn':
+#         return vgg11_bn(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'vgg13_bn':
+#         return vgg13_bn(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'vgg16_bn':
+#         return vgg16_bn(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'vgg19_bn':
+#         return vgg19_bn(pretrained=pretrained, num_classes=num_classes)
+#     if classifier == 'vgg11':
+#         return models.vgg11(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'vgg13':
+#         return models.vgg13(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'vgg16':
+#         return models.vgg16(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'vgg19':
+#         return models.vgg19(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'resnet18':
+#         return resnet18(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'resnet34':
+#         return resnet34(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'resnet50':
+#         return resnet50(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'densenet121':
+#         return densenet121(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'densenet161':
+#         return densenet161(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'densenet169':
+#         return densenet169(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'mobilenet_v2':
+#         return mobilenet_v2(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'googlenet':
+#         return googlenet(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == 'inception_v3':
+#         return inception_v3(pretrained=pretrained, num_classes=num_classes)
+#     elif classifier == "resnet34_8x":
+#         net = network.resnet_8x.ResNet34_8x(num_classes=num_classes)
+#         if pretrained:
+#             if resnet34_8x_file is not None:
+#                 net.load_state_dict( torch.load( resnet34_8x_file) )
+#             else:
+#                 raise ValueError("Cannot load pretrained resnet34_8x from here")
 
-        return net
+#         return net
 
-    else:
-        raise NameError(f'Please enter a valid classifier {classifier}')
+#     else:
+#         raise NameError(f'Please enter a valid classifier {classifier}')
 
-classifiers = [
-    "resnet34_8x", # Default DFAD
-    # "vgg11",
-    # "vgg13",
-    # "vgg16",
-    # "vgg19",
-    "vgg11_bn",
-    "vgg13_bn",
-    "vgg16_bn",
-    "vgg19_bn",
-    "resnet18",
-    "resnet34",
-    "resnet50",
-    "densenet121",
-    "densenet161",
-    "densenet169",
-    "mobilenet_v2",
-    "googlenet",
-    "inception_v3",
-]
+# classifiers = [
+#     "resnet34_8x", # Default DFAD
+#     # "vgg11",
+#     # "vgg13",
+#     # "vgg16",
+#     # "vgg19",
+#     "vgg11_bn",
+#     "vgg13_bn",
+#     "vgg16_bn",
+#     "vgg19_bn",
+#     "resnet18",
+#     "resnet34",
+#     "resnet50",
+#     "densenet121",
+#     "densenet161",
+#     "densenet169",
+#     "mobilenet_v2",
+#     "googlenet",
+#     "inception_v3",
+# ]
 

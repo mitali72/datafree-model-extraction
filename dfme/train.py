@@ -19,6 +19,7 @@ from approximate_gradients import *
 import torchvision.models as models
 from my_utils import *
 from functions import *
+from swintapi import *
 
 print("torch version", torch.__version__)
 
@@ -263,7 +264,7 @@ def main():
     parser.add_argument('--num_classes', type=int, default=600)
     args = parser.parse_args()
 
-
+    args.dataset = args.num_classes
     args.query_budget *=  10**6
     args.query_budget = int(args.query_budget)
     if args.MAZE:
@@ -281,9 +282,9 @@ def main():
         args.lr_S = 1e-1
 
 
-    if args.student_model not in classifiers:
-        if "wrn" not in args.student_model:
-            raise ValueError("Unknown model")
+    # if args.student_model not in classifiers:
+    #     if "wrn" not in args.student_model:
+    #         raise ValueError("Unknown model")
 
 
     pprint(args, width= 80)
@@ -372,21 +373,20 @@ def main():
     # accuracy = 100. * correct / len(test_loader.dataset)
     # print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
     
-    # Loading Teacher model from tensorflow hub 
-    hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
-
-    encoder = hub.KerasLayer(hub_url, trainable=False)
-
-    inputs = tf.keras.layers.Input(
-        shape=[None, None, None, 3],
-        dtype=tf.float32,
-        name='image')
-
-    # [batch_size, 600]
-    outputs = encoder(dict(image=inputs))
-
-    teacher = tf.keras.Model(inputs, outputs, name='movinet')
     
+    if args.num_classes == 600:
+        hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
+        encoder = hub.KerasLayer(hub_url, trainable=False)
+        inputs = tf.keras.layers.Input(
+            shape=[None, None, None, 3],
+            dtype=tf.float32,
+            name='image')
+        outputs = encoder(dict(image=inputs))
+        teacher = tf.keras.Model(inputs, outputs, name='movinet')
+    else:
+        # raise "Swin T not implemented yet" #TODO
+        teacher = SwinT(device)
+
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
     
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
