@@ -46,6 +46,7 @@ def get_classifier(classifier="x3d_m", pretrained=False, num_classes=400):
         dropout = 0.,         # dropout
         emb_dropout = 0.      # embedding dropout
     )
+    return model
 
     # if classifier == "wrn-28-10":
     #     net =  wrn(
