@@ -1,7 +1,7 @@
 _base_ = [
-    '../../_base_/models/swin/swin_base.py', '../../_base_/default_runtime.py'
+    '../../_base_/models/swin/swin_tiny.py', '../../_base_/default_runtime.py'
 ]
-model=dict(backbone=dict(patch_size=(2,4,4), drop_path_rate=0.3), test_cfg=dict(max_testing_views=4))
+model=dict(backbone=dict(patch_size=(2,4,4), drop_path_rate=0.1), test_cfg=dict(max_testing_views=4))
 
 # dataset settings
 dataset_type = 'VideoDataset'
@@ -89,7 +89,7 @@ evaluation = dict(
     interval=5, metrics=['top_k_accuracy', 'mean_class_accuracy'])
 
 # optimizer
-optimizer = dict(type='AdamW', lr=1e-3, betas=(0.9, 0.999), weight_decay=0.05,
+optimizer = dict(type='AdamW', lr=1e-3, betas=(0.9, 0.999), weight_decay=0.02,
                  paramwise_cfg=dict(custom_keys={'absolute_pos_embed': dict(decay_mult=0.),
                                                  'relative_position_bias_table': dict(decay_mult=0.),
                                                  'norm': dict(decay_mult=0.),
@@ -106,7 +106,7 @@ total_epochs = 30
 
 # runtime settings
 checkpoint_config = dict(interval=1)
-work_dir = './work_dirs/k400_swin_base_patch244_window877.py'
+work_dir = './work_dirs/k400_swin_tiny_patch244_window877.py'
 find_unused_parameters = False
 
 
@@ -114,7 +114,7 @@ find_unused_parameters = False
 fp16 = None
 optimizer_config = dict(
     type="DistOptimizerHook",
-    update_interval=8,
+    update_interval=4,
     grad_clip=None,
     coalesce=True,
     bucket_size_mb=-1,

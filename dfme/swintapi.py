@@ -7,8 +7,8 @@ import torch
 class SwinT():
 	def __init__(self, device):
 		super().__init__()
-		config_file = 'checkpoints/swinT/swin_tiny_patch244_window877_kinetics400_1k.py' #for swin-T
-		checkpoint_file = 'checkpoints/swin_tiny_patch244_window877_kinetics400_1k.pth'
+		config_file = '../Video-Swin-Transformer/configs/recognition/swin/swin_tiny_patch244_window877_kinetics400_1k.py' #for swin-T
+		checkpoint_file = 'dfme/checkpoint/swinT/swin_tiny_patch244_window877_kinetics400_1k.pth'
 		self.device = torch.device(device)
 		self.model = init_recognizer(config_file, checkpoint_file, device=device)
 		self.model.eval()
