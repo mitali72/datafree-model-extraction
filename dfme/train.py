@@ -396,7 +396,7 @@ def main():
     
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
-    generator = VideoGenerator(3,128,128,559-256,10)
+    generator = network.gan.VideoGenerator(3,128,128,559-256,10)
     student = student.to(device)
     generator = generator.to(device)
 
