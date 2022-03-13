@@ -1,6 +1,4 @@
 import numpy as np
-import tensorflow as tf
-import tensorflow_hub as hub
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -59,6 +57,11 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             #changing pts to tf tensor
             # print("*"*10, pts.shape, "*"*10)
             if num_classes == 600:
+                try:
+                    import tensorflow as tf
+                    import tensorflow_hub as hub
+                except ImportError:
+                    pass
                 pts_tf = torch_to_tf(pts)
                 pred_victim_pts_tf = victim_model(pts_tf)
 
