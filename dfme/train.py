@@ -451,8 +451,8 @@ def main():
 
         train(args, teacher=teacher, student=student, generator=generator, device=device, optimizer=[optimizer_S, optimizer_G], epoch=epoch)
         # Test
-        acc = test(args, student=student, generator=generator, device = device, test_loader = test_loader, epoch=epoch)
-        acc_list.append(acc)
+        # acc = test(args, student=student, generator=generator, device = device, test_loader = test_loader, epoch=epoch)
+        # acc_list.append(acc)
         if acc>best_acc:
             best_acc = acc
             name = 'resnet34_8x'
