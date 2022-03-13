@@ -62,7 +62,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
     student.train()
     
     optimizer_S,  optimizer_G = optimizer
-
+    decayRate = 0.96
+    optimGScheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer_G, gamma=decayRate)
     gradients = []
     
 
@@ -84,7 +85,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
             fake.backward(approx_grad_wrt_x)
                 
-            optimizer_G.step()
+            optimGScheduler.step()
 
             if i == 0 and args.rec_grad_norm:
                 x_true_grad = measure_true_grad_norm(args, fake)
