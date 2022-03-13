@@ -384,9 +384,10 @@ def main():
         outputs = encoder(dict(image=inputs))
         teacher = tf.keras.Model(inputs, outputs, name='movinet')
     else:
-        from swintapi import SwinT
-        # raise "Swin T not implemented yet" #TODO
-        teacher = SwinT(device)
+        # from swintapi import SwinT
+        # teacher = SwinT(device)
+        raise "not the correct branch for Swin T" #TODO
+        
 
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
     

@@ -67,11 +67,11 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 pred_victim_pts = pred_victim_pts.to(device)
             else: 
                 assert num_classes == 400
-                # raise "Swin T not implemented yet" #TODO
-                pred_victim_pts = torch.zeros(N, num_classes)
-                for i in range(N):
-                    pred_victim_pts[i] = victim_model(evaluation_points[i])
-                    
+                raise "not the correct branch for Swin T" #TODO
+                # pred_victim_pts = torch.zeros(N, num_classes)
+                # for i in range(N):
+                #     pred_victim_pts[i] = victim_model(evaluation_points[i])
+
                 
 
             # pred_victim_pts = torch.tensor(pred_victim_pts_tf.numpy())
