@@ -8,7 +8,6 @@ import network
 from tqdm import tqdm
 import torchvision.models as models
 from time import time
-from functions import tf_to_torch, torch_to_tf
 # from cifar10_models import *
 
 
@@ -60,7 +59,8 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 try:
                     import tensorflow as tf
                     import tensorflow_hub as hub
-                except ImportError:
+                    from functions import tf_to_torch, torch_to_tf
+                except (ImportError, ModuleNotFoundError):
                     pass
                 pts_tf = torch_to_tf(pts)
                 pred_victim_pts_tf = victim_model(pts_tf)
@@ -69,11 +69,11 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
                 pred_victim_pts = pred_victim_pts.to(device)
             else: 
-                assert num_classes == 400
-                raise "not the correct branch for Swin T" #TODO
-                # pred_victim_pts = torch.zeros(N, num_classes)
-                # for i in range(N):
-                #     pred_victim_pts[i] = victim_model(evaluation_points[i])
+                try:
+                    from swintapi import SwinT
+                    teacher = SwinT(device)
+                except ImportError:
+                    pass
 
                 
 

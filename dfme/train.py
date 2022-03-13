@@ -16,7 +16,6 @@ from approximate_gradients import *
 
 import torchvision.models as models
 from my_utils import *
-from functions import *
 
 
 print("torch version", torch.__version__)
@@ -97,25 +96,19 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
             # with torch.no_grad(): 
             # converting pyotrch tensor to tf tensor
+            if num_classes==600:
+                fake_tf = torch_to_tf(fake)
+                tf_logit = teacher(fake_tf)
+                # print("*"*10, tf_logit.shape, "*"*10);
 
-            fake_tf = torch_to_tf(fake)
+                # tf tensor 'tf_logit' to pytorch tensor 't_logit'
+                # t_logit = torch.tensor(tf_logit.numpy())
+                # t_logit = t_logit.to(device)
 
-            # fake_np = fake.cpu().numpy()
-            # fake_np = fake_np.reshape(fake_np.shape[0], fake_np.shape[2], fake_np.shape[3], fake_np.shape[1])
-            # fake_np = np.expand_dims(fake_np, axis=0)
-            # fake_tf = tf.convert_to_tensor(fake_np, dtype=tf.float32)
-
-            tf_logit = teacher(fake_tf)
-            
-            # print("*"*10, tf_logit.shape, "*"*10);
-
-            # tf tensor 'tf_logit' to pytorch tensor 't_logit'
-            # t_logit = torch.tensor(tf_logit.numpy())
-            # t_logit = t_logit.to(device)
-
-            t_logit = tf_to_torch(tf_logit)
-            t_logit = t_logit.to(device)
-
+                t_logit = tf_to_torch(tf_logit)
+                t_logit = t_logit.to(device)
+            else:
+                t_logit = teacher(fake)
             # Correction for the fake logits
             if args.loss == "l1" and args.no_logits:
                 t_logit = F.log_softmax(t_logit, dim=1).detach()
@@ -371,32 +364,32 @@ def main():
     #         correct += pred.eq(target.view_as(pred)).sum().item()
     # accuracy = 100. * correct / len(test_loader.dataset)
     # print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
-    
+    assert args.num_classes in [400, 600], "Please enter correct num_classes"
     teacher = None
     if args.num_classes == 600:
         try:
             import tensorflow as tf
             import tensorflow_hub as hub
-        except ImportError:
-            print("not the correct branch for MoviNeT")
-            return
-        hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
-        encoder = hub.KerasLayer(hub_url, trainable=False)
-        inputs = tf.keras.layers.Input(
-            shape=[None, None, None, 3],
-            dtype=tf.float32,
-            name='image')
-        outputs = encoder(dict(image=inputs))
-        teacher = tf.keras.Model(inputs, outputs, name='movinet')
+            from functions import tf_to_torch, torch_to_tf
+            hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
+            encoder = hub.KerasLayer(hub_url, trainable=False)
+            inputs = tf.keras.layers.Input(
+                shape=[None, None, None, 3],
+                dtype=tf.float32,
+                name='image')
+            outputs = encoder(dict(image=inputs))
+            teacher = tf.keras.Model(inputs, outputs, name='movinet')
+        except (ImportError, ModuleNotFoundError):
+            pass
     else:
         try:
             from swintapi import SwinT
             teacher = SwinT(device)
         except ImportError:
-            print("not the correct branch for Swin T")
-            return
+            pass
 
-    
+    assert teacher is not None, "Please use the correct environment"
+
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
     
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
