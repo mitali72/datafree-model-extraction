@@ -69,11 +69,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
                 pred_victim_pts = pred_victim_pts.to(device)
             else: 
-                try:
-                    from swintapi import SwinT
-                    teacher = SwinT(device)
-                except ImportError:
-                    pass
+                pred_victim_pts = victim_model(pts).to(device)
 
                 
 
@@ -151,24 +147,21 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
         x_ = args.G_activation(x_)
 
     #changing x_ to tf tensor
-
-    x_tf = torch_to_tf(x_)
-    # x_np = x_.detach().cpu().numpy()
-    # x_np = x_np.reshape(x_np.shape[0], x_np.shape[2], x_np.shape[3], x_np.shape[1])
-    # x_np = np.expand_dims(x_np, axis=0)
-    # x_tf = tf.convert_to_tensor(x_np, dtype=tf.float32)
-            
-    pred_victim_tf = victim_model(x_tf)
-
-
-    #changing to pytorch tensor
-    pred_victim = tf_to_torch(pred_victim_tf)
-    pred_victim = pred_victim.to(device)
-    # pred_victim = torch.tensor(pred_victim_tf.numpy())
-    # pred_victim = pred_victim.to(device);
+    if args.num_classes == 600:
+        try:
+            from functions import tf_to_torch, torch_to_tf
+            x_tf = torch_to_tf(x_)
+            pred_victim_tf = victim_model(x_tf)
+            #changing to pytorch tensor
+            pred_victim = tf_to_torch(pred_victim_tf)
+            pred_victim = pred_victim.to(device)
+        except (ImportError, ModuleNotFoundError):
+            pass
+    else:
+        pred_victim = victim_model(x_).to(device)    
     
     #*********************
-    x_ = x_[:, 0, :, :, :]
+    # x_ = x_[:, 0, :, :, :]
     #*********************
 
     pred_clone = clone_model(x_)
