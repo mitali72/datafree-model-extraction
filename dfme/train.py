@@ -378,7 +378,8 @@ def main():
             import tensorflow as tf
             import tensorflow_hub as hub
         except ImportError:
-            raise "not the correct branch for MoviNeT" #TODO
+            print("not the correct branch for MoviNeT")
+            return
         hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
         encoder = hub.KerasLayer(hub_url, trainable=False)
         inputs = tf.keras.layers.Input(
@@ -392,7 +393,8 @@ def main():
             from swintapi import SwinT
             teacher = SwinT(device)
         except ImportError:
-            raise "not the correct branch for Swin T" #TODO
+            print("not the correct branch for Swin T")
+            return
 
     
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
