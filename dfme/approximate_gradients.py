@@ -156,7 +156,7 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
             pred_victim = tf_to_torch(pred_victim_tf)
             pred_victim = pred_victim.to(device)
         except (ImportError, ModuleNotFoundError):
-            pass
+            raise ImportError("ERROR!!!")
     else:
         pred_victim = victim_model(x_).to(device)    
     
