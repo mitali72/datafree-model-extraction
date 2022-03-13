@@ -391,7 +391,9 @@ def main():
         try:
             from swintapi import SwinT
             teacher = SwinT(device)
+            args.teacher = teacher
         except:
+            args.teacher = None
             pass
         # raise "not the correct branch for Swin T" #TODO
         
@@ -405,7 +407,6 @@ def main():
 
     args.generator = generator
     args.student = student
-    args.teacher = teacher
 
     
     if args.student_load_path :
