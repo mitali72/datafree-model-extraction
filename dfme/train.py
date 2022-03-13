@@ -390,9 +390,9 @@ def main():
     else:
         try:
             from swintapi import SwinT
+            teacher = SwinT(device)
         except:
             pass
-        teacher = SwinT(device)
         # raise "not the correct branch for Swin T" #TODO
         
 
