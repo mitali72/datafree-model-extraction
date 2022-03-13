@@ -373,8 +373,11 @@ def main():
     
     
     if args.num_classes == 600:
-        import tensorflow as tf
-        import tensorflow_hub as hub
+        try:
+            import tensorflow as tf
+            import tensorflow_hub as hub
+        except ImportError:
+            pass
         hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
         encoder = hub.KerasLayer(hub_url, trainable=False)
         inputs = tf.keras.layers.Input(
@@ -384,9 +387,12 @@ def main():
         outputs = encoder(dict(image=inputs))
         teacher = tf.keras.Model(inputs, outputs, name='movinet')
     else:
-        # from swintapi import SwinT
-        # teacher = SwinT(device)
-        raise "not the correct branch for Swin T" #TODO
+        try:
+            from swintapi import SwinT
+        except:
+            pass
+        teacher = SwinT(device)
+        # raise "not the correct branch for Swin T" #TODO
         
 
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)

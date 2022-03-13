@@ -1,3 +1,4 @@
+torch>=1.2
 torchvision
 numpy
 pillow
@@ -5,3 +6,5 @@ scikit-learn
 matplotlib
 tqdm
 ipdb
+stam-pytorch
+pytorchvideo
