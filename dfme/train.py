@@ -75,7 +75,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             generator.train()
             #Get fake image from generator
             fake = generator(z, pre_x=args.approx_grad) # pre_x returns the output of G before applying the activation
-
+            fake = fake.repeat(1, 10, 1, 1, 1)
 
             ## APPOX GRADIENT
             approx_grad_wrt_x, loss_G = estimate_gradient_objective(args, teacher, student, fake, 

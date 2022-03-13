@@ -1,7 +1,7 @@
 # from cifar10_models import *
 from approximate_gradients import *
 # import network
-import pytorchvideo.models.resnet as videoresnet
+# import pytorchvideo.models.resnet as videoresnet ##Only works with python 3.7
 import torch
 from stam_pytorch import STAM
 
