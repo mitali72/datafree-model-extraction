@@ -208,7 +208,7 @@ class GeneratorImageOurs(nn.Module):
         
 class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(3,a,b,c,video_length); a+b+c = 559
     def __init__(self, n_channels, dim_z_content, dim_z_category, dim_z_motion,
-                 video_length, ngf=64):
+                 video_length, ngf=64, activation=None):
         super(VideoGenerator, self).__init__()
 
         self.n_channels = n_channels
@@ -216,7 +216,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         self.dim_z_category = dim_z_category
         self.dim_z_motion = dim_z_motion
         self.video_length = video_length
-
+        self.activation = activation
         dim_z = dim_z_motion + dim_z_category + dim_z_content
 
         self.recurrent = nn.GRUCell(dim_z_motion, dim_z_motion)
@@ -293,7 +293,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         return z, z_category_labels
 
-    def forward(self, num_samples, video_len=None):
+    def forward(self, num_samples, pre_x = None, video_len=None):
         video_len = video_len if video_len is not None else self.video_length
 
         z, z_category_labels = self.sample_z_video(num_samples, video_len)
@@ -307,7 +307,11 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
             z_category_labels = z_category_labels.cuda()
 
         h = h.permute(0, 2, 1, 3, 4)
-        return h#, Variable(z_category_labels, requires_grad=False)
+        if pre_x :
+            return h
+        else:
+            return self.activation(h)
+        # return h#, Variable(z_category_labels, requires_grad=False)
 
     def sample_images(self, num_samples):
         z, z_category_labels = self.sample_z_video(num_samples * self.video_length * 2)
