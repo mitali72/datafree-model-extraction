@@ -372,13 +372,13 @@ def main():
     # accuracy = 100. * correct / len(test_loader.dataset)
     # print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
     
-    
+    teacher = None
     if args.num_classes == 600:
         try:
             import tensorflow as tf
             import tensorflow_hub as hub
         except ImportError:
-            pass
+            raise "not the correct branch for MoviNeT" #TODO
         hub_url = "https://tfhub.dev/tensorflow/movinet/a2/base/kinetics-600/classification/3" #/1 gives better on image
         encoder = hub.KerasLayer(hub_url, trainable=False)
         inputs = tf.keras.layers.Input(
@@ -391,13 +391,10 @@ def main():
         try:
             from swintapi import SwinT
             teacher = SwinT(device)
-            args.teacher = teacher
-        except:
-            args.teacher = None
-            pass
-        # raise "not the correct branch for Swin T" #TODO
-        
+        except ImportError:
+            raise "not the correct branch for Swin T" #TODO
 
+    
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
     
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
@@ -407,13 +404,14 @@ def main():
 
     args.generator = generator
     args.student = student
+    args.teacher = teacher
 
     
-    if args.student_load_path :
-        # "checkpoint/student_no-grad/cifar10-resnet34_8x.pt"
-        student.load_state_dict( torch.load( args.student_load_path ) )
-        myprint("Student initialized from %s"%(args.student_load_path))
-        acc = test(args, student=student, generator=generator, device = device, test_loader = test_loader)
+    # if args.student_load_path :
+    #     # "checkpoint/student_no-grad/cifar10-resnet34_8x.pt"
+    #     student.load_state_dict( torch.load( args.student_load_path ) )
+    #     myprint("Student initialized from %s"%(args.student_load_path))
+    #     acc = test(args, student=student, generator=generator, device = device, test_loader = test_loader)
 
     ## Compute the number of epochs with the given query budget:
     args.cost_per_iteration = args.batch_size * (args.g_iter * (args.grad_m+1) + args.d_iter)
