@@ -193,6 +193,8 @@ class GeneratorImageOurs(nn.Module):
         if activation is None:
             raise ValueError("Provide a valid activation function")
         self.activation = activation
+        
+
 
     def forward(self,z, pre_x = None):
         # Generate images batch*C*H*W
@@ -237,6 +239,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
             nn.ConvTranspose2d(self.n_channels, self.n_channels, 4,2,1),
             nn.ReLU(True)
         )
+        
                                      
 
     def sample_z_m(self, num_samples, video_len=None):
@@ -258,10 +261,13 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         if self.dim_z_category <= 0:
             return None, np.zeros(num_samples)
+        # num samples (int), num_samples.shape=[1,559]
+        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        # b = num_samples.detach().cpu().numpy().shape[1]
 
-        classes_to_generate = np.random.randint(self.dim_z_category, size=num_samples)
-        one_hot = np.zeros((num_samples, self.dim_z_category), dtype=np.float32)
-        one_hot[np.arange(num_samples), classes_to_generate] = 1
+        classes_to_generate = np.random.randint(self.dim_z_category, size=(n_samples))
+        one_hot = np.zeros((n_samples, self.dim_z_category), dtype=np.float32)
+        one_hot[np.arange(n_samples), classes_to_generate] = 1
         one_hot_video = np.repeat(one_hot, video_len, axis=0)
 
         one_hot_video = torch.from_numpy(one_hot_video)
@@ -274,7 +280,11 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
     def sample_z_content(self, num_samples, video_len=None):
         video_len = video_len if video_len is not None else self.video_length
 
-        content = np.random.normal(0, 1, (num_samples, self.dim_z_content)).astype(np.float32)
+        
+        # num samples (int), num_samples.shape=[1,559]
+        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        content = np.random.normal(0, 1, (n_samples, self.dim_z_content)).astype(np.float32)
+        
         content = np.repeat(content, video_len, axis=0)
         content = torch.from_numpy(content)
         if torch.cuda.is_available():
@@ -324,7 +334,11 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         return h, None
 
     def get_gru_initial_state(self, num_samples):
-        return Variable(T.FloatTensor(num_samples, self.dim_z_motion).normal_())
+        # num samples (int), num_samples.shape=[1,559]
+        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        return Variable(T.FloatTensor(n_samples, self.dim_z_motion).normal_())
 
     def get_iteration_noise(self, num_samples):
-        return Variable(T.FloatTensor(num_samples, self.dim_z_motion).normal_())
+        # num samples (int), num_samples.shape=[1,559]
+        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        return Variable(T.FloatTensor(n_samples, self.dim_z_motion).normal_())
