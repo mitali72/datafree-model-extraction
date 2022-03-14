@@ -64,7 +64,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
     decayRate = 0.96
     optimGScheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer_G, gamma=decayRate)
     gradients = []
-    
+    kl_loss = nn.KLDivLoss(reduction="batchmean")
 
     for i in range(args.epoch_itrs):
         """Repeat epoch_itrs times per epoch"""
@@ -104,13 +104,15 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                 fake_tf = torch_to_tf(fake)
                 tf_logit = teacher(fake_tf)
                 # print("*"*10, tf_logit.shape, "*"*10);
-
+                
                 # tf tensor 'tf_logit' to pytorch tensor 't_logit'
                 # t_logit = torch.tensor(tf_logit.numpy())
                 # t_logit = t_logit.to(device)
 
                 t_logit = tf_to_torch(tf_logit)
                 t_logit = t_logit.to(device)
+                #should we take loss between softmax of t_logit and z?
+                teacher_loss = kl_loss(t_logit,z)
             else:
                 t_logit = torch.zeros(args.batch_size,args.num_classes).to(device)
                 for i in range(args.batch_size):
@@ -128,7 +130,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             s_logit = student(fake)
 
 
-            loss_S = student_loss(args, s_logit, t_logit)
+            loss_S = student_loss(args, s_logit, t_logit)+teacher_loss
             loss_S.backward()
             optimizer_S.step()
 
