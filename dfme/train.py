@@ -102,6 +102,11 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                 except (ImportError, ModuleNotFoundError):
                     raise "ERROR!!!"
                 fake_tf = torch_to_tf(fake)
+
+                fake_tfmin = tf.reshape(tf.reduce_min(fake_tf,axis = [1,2,3]),[fake_tf.shape[0],1,1,1,fake_tf.shape[4]])
+                fake_tfmax = tf.reshape(tf.reduce_max(fake_tf,axis = [1,2,3]),[fake_tf.shape[0],1,1,1,fake_tf.shape[4]])
+                fake_tf = (fake_tf+ fake_tfmin)/(fake_tfmax-fake_tfmin)
+
                 tf_logit = teacher(fake_tf)
                 # print("*"*10, tf_logit.shape, "*"*10);
                 
