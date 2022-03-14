@@ -113,8 +113,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                 t_logit = t_logit.to(device)
             else:
                 t_logit = torch.zeros(args.batch_size,args.num_classes).to(device)
-                for i in range(args.batch_size):
-                    t_logit[i] = teacher(fake[i].unsqueeze(0)).to(device)
+                for j in range(args.batch_size):
+                    t_logit[j] = teacher(fake[j].unsqueeze(0)).to(device)
                 # t_logit = teacher(fake)
             # Correction for the fake logits
             if args.loss == "l1" and args.no_logits:
