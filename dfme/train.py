@@ -98,10 +98,14 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             # converting pyotrch tensor to tf tensor
             if args.num_classes==600:
                 try:
+                    import tensorflow as tf
                     from functions import tf_to_torch, torch_to_tf                  
                 except (ImportError, ModuleNotFoundError):
                     raise "ERROR!!!"
                 fake_tf = torch_to_tf(fake)
+                fake_tfmin = tf.reduce_min(fake_tf,axis = [1,3,4])
+                fake_tfmax = tf.reduce_max(fake_tf, axis = [1,3,4])
+                fake_tf = (fake_tf+ fake_tfmin)/(fake_tfmax-fake_tfmin)
                 tf_logit = teacher(fake_tf)
                 # print("*"*10, tf_logit.shape, "*"*10);
 

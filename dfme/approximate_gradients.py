@@ -63,6 +63,10 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 except (ImportError, ModuleNotFoundError):
                     pass
                 pts_tf = torch_to_tf(pts)
+                #pts_tf shape: n'*T*C*S*S
+                pts_min = tf.reduce_min(pts_tf,axis = [1,3,4])
+                pts_max = tf.reduce_max(pts_tf, axis = [1,3,4])
+                pts_tf = (pts_tf+ pts_min)/(pts_max-pts_min)
                 pred_victim_pts_tf = victim_model(pts_tf)
 
                 #changing to pytorch tensor
@@ -152,8 +156,12 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
     #changing x_ to tf tensor
     if args.num_classes == 600:
         try:
+            import tensorflow as tf
             from functions import tf_to_torch, torch_to_tf
             x_tf = torch_to_tf(x_)
+            x_tfmin = tf.reduce_min(x_tf,axis = [1,3,4])
+            x_tfmax = tf.reduce_max(x_tf, axis = [1,3,4])
+            x_tf = (x_tf+ x_tfmin)/(x_tfmax-x_tfmin)
             pred_victim_tf = victim_model(x_tf)
             #changing to pytorch tensor
             pred_victim = tf_to_torch(pred_victim_tf)
