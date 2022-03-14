@@ -24,7 +24,7 @@ class SwinT():
 		with OutputHook(self.model, outputs=True, as_tensor=as_tensor) as h:
 			with torch.no_grad():
 				scores = self.model(data,return_loss=False)[0]
-			return scores
+			return torch.from_numpy(scores).to(self.device)
 
 	def __call__(self, x):
 		ans = self.SwinTApi(x)
