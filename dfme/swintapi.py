@@ -15,7 +15,7 @@ class SwinT():
 
 	def SwinTApi(self, data, as_tensor= True):
 		'''data is a tensor: nxtxcxhxw'''
-		data = data.permute(0,2,1,3,4)
+		data = data.permute(0,2,1,3,4).unsqueeze(0)
 		if next(self.model.parameters()).is_cuda:
 		# scatter to specified GPU
 			data = scatter(data, [self.device])[0]
