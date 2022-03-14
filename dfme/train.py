@@ -441,7 +441,7 @@ def main():
 
     best_acc = 0
     acc_list = []
-
+    acc = 0
     for epoch in range(1, number_epochs + 1):
         # Train
         if args.scheduler != "none":
