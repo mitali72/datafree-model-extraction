@@ -69,7 +69,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
                 pred_victim_pts = pred_victim_pts.to(device)
             else:
-                pseudo_batch_size = pts.shape
+                pseudo_batch_size = pts.shape[0]
                 pred_victim_pts = torch.zeros(pseudo_batch_size,num_classes).to(device)
                 for j in range(pseudo_batch_size):
                     pred_victim_pts[j] = victim_model(pts[j].unsqueeze(0)).to(device)
