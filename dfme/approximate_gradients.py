@@ -68,8 +68,10 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 #changing to pytorch tensor
                 pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
                 pred_victim_pts = pred_victim_pts.to(device)
-            else: 
-                pred_victim_pts = victim_model(pts).to(device)
+            else:
+                pred_victim_pts = torch.zeros(N,num_classes).to(device)
+                for i in range(N):
+                    pred_victim_pts[i] = victim_model(pts[i].unsqueeze(0)).to(device)
 
                 
 
