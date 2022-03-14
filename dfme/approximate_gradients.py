@@ -160,8 +160,11 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
         except (ImportError, ModuleNotFoundError):
             raise ImportError("ERROR!!!")
     else:
-        pred_victim = victim_model(x_).to(device)    
-    
+        pred_victim_pts = torch.zeros(N,args.num_classes).to(device)
+        for i in range(N):
+            pred_victim_pts[i] = victim_model(x_[i].unsqueeze(0)).to(device)   
+        pred_victim = pred_victim_pts
+        
     #*********************
     # x_ = x_[:, 0, :, :, :]
     #*********************
