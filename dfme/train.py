@@ -445,10 +445,10 @@ def main():
         default_lr = 1e-3
         default_mom = 0.9
         optimizer_G = optim.Adam([
-               {'params': generator.main[0].parameters(), 'lr':1e-3 },
-              {'params': generator.main[1].parameters(), 'lr':0.5e-3 },
-              {'params': generator.main[3].parameters(), 'lr':1e-4 },
-              {'params': generator.main[4].parameters(), 'lr':0.4e-4 }
+               {'params': generator.module.main[0].parameters(), 'lr':1e-3 },
+              {'params': generator.module.main[1].parameters(), 'lr':0.5e-3 },
+              {'params': generator.module.main[3].parameters(), 'lr':1e-4 },
+              {'params': generator.module.main[4].parameters(), 'lr':0.4e-4 }
         ], lr=default_lr)
 
     steps = sorted([int(step * number_epochs) for step in args.steps])
