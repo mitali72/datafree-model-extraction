@@ -232,17 +232,17 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         self.modelG.addScale(128)
         self.modelG.setNewAlpha(0.0)
 
-        self.upsample = nn.Sequential(
-            nn.ConvTranspose2d(self.n_channels, self.n_channels, 4,2,3),
-            nn.BatchNorm2d(self.n_channels),
-            nn.AvgPool2d(kernel_size = (16,16), stride = (2,2)),
-            nn.ReLU(True),
-            nn.Conv2d(self.n_channels, self.n_channels, 8, 1),
-            nn.BatchNorm2d(self.n_channels),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(self.n_channels, self.n_channels, 4,2,1),
-            nn.ReLU(True)
-        )
+#         self.upsample = nn.Sequential(
+#             nn.ConvTranspose2d(self.n_channels, self.n_channels, 4,2,3),
+#             nn.BatchNorm2d(self.n_channels),
+#             nn.AvgPool2d(kernel_size = (16,16), stride = (2,2)),
+#             nn.ReLU(True),
+#             nn.Conv2d(self.n_channels, self.n_channels, 8, 1),
+#             nn.BatchNorm2d(self.n_channels),
+#             nn.ReLU(True),
+#             nn.ConvTranspose2d(self.n_channels, self.n_channels, 4,2,1),
+#             nn.ReLU(True)
+#         )
         
                                      
 
@@ -312,7 +312,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         z, z_category_labels = self.sample_z_video(num_samples, video_len)
 
-        h = self.upsample(self.modelG(z.view(z.size(0), z.size(1), 1, 1)))
+        h = self.modelG(z.view(z.size(0), z.size(1), 1, 1))
         h = h.view(h.size(0) // video_len, video_len, self.n_channels, h.size(3), h.size(3))
 
         z_category_labels = torch.from_numpy(z_category_labels)
