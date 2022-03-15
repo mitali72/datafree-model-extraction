@@ -164,31 +164,31 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
 
 def test(args, student = None, generator = None, device = "cuda", test_loader = None, epoch=0):
-    # global file
-    # student.eval()
-    # generator.eval()
+    global file
+    student.eval()
+    generator.eval()
 
-    # test_loss = 0
-    # correct = 0
-    # with torch.no_grad():
-    #     for i, (data, target) in enumerate(test_loader):
-    #         data, target = data.to(device), target.to(device)
-    #         output = student(data)
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for i, (data, target) in enumerate(test_loader):
+            data, target = data.to(device), target.to(device)
+            output = student(data)
 
-    #         test_loss += F.cross_entropy(output, target, reduction='sum').item() # sum up batch loss
-    #         pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
-    #         correct += pred.eq(target.view_as(pred)).sum().item()
+            test_loss += F.cross_entropy(output, target, reduction='sum').item() # sum up batch loss
+            pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
 
-    # test_loss /= len(test_loader.dataset)
-    # accuracy = 100. * correct / len(test_loader.dataset)
-    # myprint('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
-    #     test_loss, correct, len(test_loader.dataset),
-    #     accuracy))
-    # with open(args.log_dir + "/accuracy.csv", "a") as f:
-    #     f.write("%d,%f\n"%(epoch, accuracy))
-    # acc = correct/len(test_loader.dataset)
-    # return acc
-    pass
+    test_loss /= len(test_loader.dataset)
+    accuracy = 100. * correct / len(test_loader.dataset)
+    myprint('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
+        test_loss, correct, len(test_loader.dataset),
+        accuracy))
+    with open(args.log_dir + "/accuracy.csv", "a") as f:
+        f.write("%d,%f\n"%(epoch, accuracy))
+    acc = correct/len(test_loader.dataset)
+    return acc
+#     pass
 
 def compute_grad_norms(generator, student):
     G_grad = []
