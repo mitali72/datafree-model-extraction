@@ -435,8 +435,16 @@ def main():
     if args.MAZE:
         optimizer_G = optim.SGD( generator.parameters(), lr=args.lr_G , weight_decay=args.weight_decay, momentum=0.9 )    
     else:
-        optimizer_G = optim.Adam( generator.parameters(), lr=args.lr_G )
-    
+        #optimizer_G = optim.Adam( generator.parameters(), lr=args.lr_G )
+        default_lr = 1e-3
+        default_mom = 0.9
+        optimizer_G = optim.Adam([
+               {'params': generator.main[0].parameters(), 'lr':10e-3 },
+              {'params': generator.main[1].parameters(), 'lr':8e-3 },
+              {'params': generator.main[3].parameters(), 'lr':6e-3 },
+              {'params': generator.main[4].parameters(), 'lr':4e-3 }
+        ], lr=default_lr, momentum=default_mom)
+
     steps = sorted([int(step * number_epochs) for step in args.steps])
     print("Learning rate scheduling at steps: ", steps)
     print()
