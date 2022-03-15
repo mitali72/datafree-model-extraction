@@ -62,7 +62,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
     
     optimizer_S,  optimizer_G = optimizer
     decayRate = 0.96
-    optimGScheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer_G, gamma=decayRate)
+    #optimGScheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer_G, gamma=decayRate)
     gradients = []
     kl_loss = nn.KLDivLoss(reduction="batchmean")
 
@@ -84,7 +84,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
             fake.backward(approx_grad_wrt_x)
                 
-            optimGScheduler.step()
+            optimizer_G.step()
 
             if i == 0 and args.rec_grad_norm:
                 x_true_grad = measure_true_grad_norm(args, fake)
@@ -325,7 +325,8 @@ def main():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
-    device = torch.device("cuda:%d"%args.device if use_cuda else "cpu")
+    device = "cuda" if torch.cuda.isavailable() else "cpu"
+    #torch.device("cuda:%d"%args.device if use_cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     
     # Preparing checkpoints for the best Student
@@ -407,9 +408,14 @@ def main():
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
     generator = network.gan.VideoGenerator(3,128,128,559-256,10)
+    
+    generator = nn.DataParallel(generator)
+    student = nn.DataParallel(student)
+    
     student = student.to(device)
     generator = generator.to(device)
-
+    
+    
     args.generator = generator
     args.student = student
     args.teacher = teacher
@@ -439,11 +445,11 @@ def main():
         default_lr = 1e-3
         default_mom = 0.9
         optimizer_G = optim.Adam([
-               {'params': generator.main[0].parameters(), 'lr':10e-3 },
-              {'params': generator.main[1].parameters(), 'lr':8e-3 },
-              {'params': generator.main[3].parameters(), 'lr':6e-3 },
-              {'params': generator.main[4].parameters(), 'lr':4e-3 }
-        ], lr=default_lr, momentum=default_mom)
+               {'params': generator.main[0].parameters(), 'lr':1e-3 },
+              {'params': generator.main[1].parameters(), 'lr':0.5e-3 },
+              {'params': generator.main[3].parameters(), 'lr':1e-4 },
+              {'params': generator.main[4].parameters(), 'lr':0.4e-4 }
+        ], lr=default_lr)
 
     steps = sorted([int(step * number_epochs) for step in args.steps])
     print("Learning rate scheduling at steps: ", steps)
