@@ -444,11 +444,25 @@ def main():
         #optimizer_G = optim.Adam( generator.parameters(), lr=args.lr_G )
         default_lr = 1e-3
         default_mom = 0.9
-        optimizer_G = optim.Adam([
-               {'params': generator.module.main[0].parameters(), 'lr':1e-3 },
-              {'params': generator.module.main[1].parameters(), 'lr':0.5e-3 },
-              {'params': generator.module.main[3].parameters(), 'lr':1e-4 },
-              {'params': generator.module.main[4].parameters(), 'lr':0.4e-4 }
+        optimizer_G = optim.AdamW([
+               {'params': model.modelG.scaleLayers[0][0].parameters(), 'lr':1e-4 },
+               {'params': model.modelG.scaleLayers[0][1].parameters(), 'lr':1e-4 },
+
+               {'params': model.modelG.scaleLayers[1][0].parameters(), 'lr':5e-4 },
+               {'params': model.modelG.scaleLayers[1][1].parameters(), 'lr':5e-4 },
+
+               {'params': model.modelG.scaleLayers[2][0].parameters(), 'lr':5e-4 },
+               {'params': model.modelG.scaleLayers[2][1].parameters(), 'lr':5e-4 },
+
+               {'params': model.modelG.scaleLayers[3][0].parameters(), 'lr':5e-4 },
+               {'params': model.modelG.scaleLayers[3][1].parameters(), 'lr':5e-4 },
+
+               {'params': model.modelG.scaleLayers[4][0].parameters(), 'lr':1e-3 },
+               {'params': model.modelG.scaleLayers[4][1].parameters(), 'lr':1e-3 },
+
+               {'params': model.modelG.scaleLayers[5][0].parameters(), 'lr':1e-3 },
+               {'params': model.modelG.scaleLayers[5][1].parameters(), 'lr':1e-3 },
+              
         ], lr=default_lr)
 
     steps = sorted([int(step * number_epochs) for step in args.steps])
