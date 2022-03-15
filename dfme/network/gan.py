@@ -190,8 +190,8 @@ class GeneratorImageOurs(nn.Module):
                        'PGAN', model_name='DTD',
                        pretrained=True, useGPU=use_gpu)
         self.modelG = self.model.getNetG()
-        self.modelG.addScale(128)
-        self.modelG.setNewAlpha(0.0)
+        #self.modelG.addScale(128)
+        #self.modelG.setNewAlpha(0.0)
         if activation is None:
             raise ValueError("Provide a valid activation function")
         self.activation = activation
@@ -229,8 +229,8 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
                        'PGAN', model_name='DTD',
                        pretrained=True, useGPU=False)
         self.modelG = self.model.getNetG()
-        self.modelG.addScale(128)
-        self.modelG.setNewAlpha(0.0)
+        #self.modelG.addScale(128)
+        #self.modelG.setNewAlpha(0.0)
 
 #         self.upsample = nn.Sequential(
 #             nn.ConvTranspose2d(self.n_channels, self.n_channels, 4,2,3),
