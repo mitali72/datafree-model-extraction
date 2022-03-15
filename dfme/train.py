@@ -445,24 +445,24 @@ def main():
         default_lr = 1e-3
         default_mom = 0.9
         optimizer_G = optim.AdamW([
-               {'params': generator.modelG.scaleLayers[0][0].parameters(), 'lr':1e-4 },
-               {'params': generator.modelG.scaleLayers[0][1].parameters(), 'lr':1e-4 },
+           {'params': generator.module.modelG.scaleLayers[0][0].parameters(), 'lr':1e-4 },
+           {'params': generator.module.modelG.scaleLayers[0][1].parameters(), 'lr':1e-4 },
 
-               {'params': generator.modelG.scaleLayers[1][0].parameters(), 'lr':5e-4 },
-               {'params': generator.modelG.scaleLayers[1][1].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[1][0].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[1][1].parameters(), 'lr':5e-4 },
 
-               {'params': generator.modelG.scaleLayers[2][0].parameters(), 'lr':5e-4 },
-               {'params': generator.modelG.scaleLayers[2][1].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[2][0].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[2][1].parameters(), 'lr':5e-4 },
 
-               {'params': generator.modelG.scaleLayers[3][0].parameters(), 'lr':5e-4 },
-               {'params': generator.modelG.scaleLayers[3][1].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[3][0].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[3][1].parameters(), 'lr':5e-4 },
 
-               {'params': generator.modelG.scaleLayers[4][0].parameters(), 'lr':1e-3 },
-               {'params': generator.modelG.scaleLayers[4][1].parameters(), 'lr':1e-3 },
+           {'params': generator.module.modelG.scaleLayers[4][0].parameters(), 'lr':1e-3 },
+           {'params': generator.module.modelG.scaleLayers[4][1].parameters(), 'lr':1e-3 },
 
-               {'params': generator.modelG.scaleLayers[5][0].parameters(), 'lr':1e-3 },
-               {'params': generator.modelG.scaleLayers[5][1].parameters(), 'lr':1e-3 },
-              
+           {'params': generator.module.modelG.scaleLayers[5][0].parameters(), 'lr':1e-3 },
+           {'params': generator.module.modelG.scaleLayers[5][1].parameters(), 'lr':1e-3 },
+
         ], lr=default_lr)
 
     steps = sorted([int(step * number_epochs) for step in args.steps])
