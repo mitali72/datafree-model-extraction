@@ -325,7 +325,7 @@ def main():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
-    device = "cuda" if torch.cuda.isavailable() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     #torch.device("cuda:%d"%args.device if use_cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     
