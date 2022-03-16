@@ -307,7 +307,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         return z, z_category_labels
 
-    def forward(self, num_samples, pre_x = None, video_len=None):
+    def sample_videos(self, num_samples, pre_x = None, video_len=None):
         video_len = video_len if video_len is not None else self.video_length
 
         z, z_category_labels = self.sample_z_video(num_samples, video_len)

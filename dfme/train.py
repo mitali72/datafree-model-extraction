@@ -84,7 +84,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                                                 epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, 
                                                 device=device, pre_x=True)
 
-            fake.backward(approx_grad_wrt_x)
+            loss_G.backward()
+            # fake.backward(approx_grad_wrt_x)
                 
             optimizer_G.step()
 
