@@ -328,7 +328,7 @@ def main():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #device = torch.device([torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())])
     #print(torch.cuda.device_count())
     #torch.device("cuda:%d"%args.device if use_cuda else "cpu")
@@ -414,13 +414,13 @@ def main():
     torch.cuda.empty_cache() 
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
-    generator = network.gan.VideoGenerator(3,128,128,559-256,10)
+    generator = network.gan.VideoGenerator(3,128,128,559-256,1)
     
     generator = nn.DataParallel(generator)
     student = nn.DataParallel(student)
-    device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    student = student.to(device2)
-    device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+    #device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    student = student.to(device)
+    #device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     generator = generator.to(device)
     #teacher = teacher.to(device)
     #pdb.set_trace() 
