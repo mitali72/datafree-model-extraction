@@ -16,7 +16,7 @@ from approximate_gradients import *
 
 import torchvision.models as models
 from my_utils import *
-
+import pdb
 
 print("torch version", torch.__version__)
 
@@ -71,12 +71,14 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
         for _ in range(args.g_iter):
             #Sample Random Noise
             z = torch.randn((args.batch_size, args.nz)).to(device)
+            #print(z.shape)
             optimizer_G.zero_grad()
             generator.train()
             #Get fake image from generator
             fake = generator(z, pre_x=args.approx_grad) # pre_x returns the output of G before applying the activation
             # fake = fake.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
-
+            #print(z.shape, fake.shape)
+            #pdb.set_trace()
             ## APPOX GRADIENT
             approx_grad_wrt_x, loss_G = estimate_gradient_objective(args, teacher, student, fake, 
                                                 epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, 
@@ -88,7 +90,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
             if i == 0 and args.rec_grad_norm:
                 x_true_grad = measure_true_grad_norm(args, fake)
-
+            
         for _ in range(args.d_iter):
             z = torch.randn((args.batch_size, args.nz)).to(device)
             fake = generator(z).detach()
@@ -325,7 +327,9 @@ def main():
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #device = torch.device([torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())])
+    #print(torch.cuda.device_count())
     #torch.device("cuda:%d"%args.device if use_cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     
@@ -404,18 +408,21 @@ def main():
     assert teacher is not None, "Please use the correct environment"
 
     student = get_classifier(args.student_model, pretrained=False, num_classes=args.num_classes)
-    
+    import gc
+    gc.collect()
+    torch.cuda.empty_cache() 
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
     generator = network.gan.VideoGenerator(3,128,128,559-256,10)
     
     generator = nn.DataParallel(generator)
     student = nn.DataParallel(student)
-    
-    student = student.to(device)
+    device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    student = student.to(device2)
+    device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     generator = generator.to(device)
-    
-    
+    #teacher = teacher.to(device)
+    #pdb.set_trace() 
     args.generator = generator
     args.student = student
     args.teacher = teacher
@@ -445,24 +452,24 @@ def main():
         default_lr = 1e-3
         default_mom = 0.9
         optimizer_G = optim.AdamW([
-               {'params': model.modelG.scaleLayers[0][0].parameters(), 'lr':1e-4 },
-               {'params': model.modelG.scaleLayers[0][1].parameters(), 'lr':1e-4 },
+           {'params': generator.module.modelG.scaleLayers[0][0].parameters(), 'lr':1e-4 },
+           {'params': generator.module.modelG.scaleLayers[0][1].parameters(), 'lr':1e-4 },
 
-               {'params': model.modelG.scaleLayers[1][0].parameters(), 'lr':5e-4 },
-               {'params': model.modelG.scaleLayers[1][1].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[1][0].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[1][1].parameters(), 'lr':5e-4 },
 
-               {'params': model.modelG.scaleLayers[2][0].parameters(), 'lr':5e-4 },
-               {'params': model.modelG.scaleLayers[2][1].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[2][0].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[2][1].parameters(), 'lr':5e-4 },
 
-               {'params': model.modelG.scaleLayers[3][0].parameters(), 'lr':5e-4 },
-               {'params': model.modelG.scaleLayers[3][1].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[3][0].parameters(), 'lr':5e-4 },
+           {'params': generator.module.modelG.scaleLayers[3][1].parameters(), 'lr':5e-4 },
 
-               {'params': model.modelG.scaleLayers[4][0].parameters(), 'lr':1e-3 },
-               {'params': model.modelG.scaleLayers[4][1].parameters(), 'lr':1e-3 },
+           {'params': generator.module.modelG.scaleLayers[4][0].parameters(), 'lr':1e-3 },
+           {'params': generator.module.modelG.scaleLayers[4][1].parameters(), 'lr':1e-3 },
 
-               {'params': model.modelG.scaleLayers[5][0].parameters(), 'lr':1e-3 },
-               {'params': model.modelG.scaleLayers[5][1].parameters(), 'lr':1e-3 },
-              
+           {'params': generator.module.modelG.scaleLayers[5][0].parameters(), 'lr':1e-3 },
+           {'params': generator.module.modelG.scaleLayers[5][1].parameters(), 'lr':1e-3 },
+
         ], lr=default_lr)
 
     steps = sorted([int(step * number_epochs) for step in args.steps])
@@ -516,5 +523,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
