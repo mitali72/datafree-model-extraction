@@ -75,7 +75,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             optimizer_G.zero_grad()
             generator.train()
             #Get fake image from generator
-            fake = generator(z, pre_x=args.approx_grad) # pre_x returns the output of G before applying the activation
+            fake = generator.sample_videos(z, pre_x=args.approx_grad) # pre_x returns the output of G before applying the activation
             # fake = fake.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
             #print(z.shape, fake.shape)
             #pdb.set_trace()
