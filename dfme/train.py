@@ -100,6 +100,16 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             # with torch.no_grad(): 
             # converting pyotrch tensor to tf tensor
             if args.num_classes==600:
+                
+                '''fake => generator output'''
+
+                fake_min = torch.reshape(torch.amin(fake, dim=(1, 2, 3)), (fake.shape[0], 1, 1, 1, fake.shape[4]))
+                fake_max = torch.reshape(torch.amax(fake, axis=(1, 2, 3)), (fake.shape[0], 1, 1, 1, fake.shape[4]))
+                fake_norm = (fake + fake_min) / (fake_max - fake_min)
+
+                t_logit = teacher(fake_norm).to(device)
+                
+                ''' # prev tensorflow
                 try:
                     from functions import tf_to_torch, torch_to_tf                  
                 except (ImportError, ModuleNotFoundError):
@@ -108,7 +118,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
 
                 fake_tfmin = tf.reshape(tf.reduce_min(fake_tf,axis = [1,2,3]),[fake_tf.shape[0],1,1,1,fake_tf.shape[4]])
                 fake_tfmax = tf.reshape(tf.reduce_max(fake_tf,axis = [1,2,3]),[fake_tf.shape[0],1,1,1,fake_tf.shape[4]])
-                fake_tf = (fake_tf+ fake_tfmin)/(fake_tfmax-fake_tfmin)
+                fake_tf = (fake_tf + fake_tfmin)/(fake_tfmax-fake_tfmin)
 
                 tf_logit = teacher(fake_tf)
                 # print("*"*10, tf_logit.shape, "*"*10);
@@ -121,6 +131,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
                 t_logit = t_logit.to(device)
                 #should we take loss between softmax of t_logit and z?
                 # teacher_loss = kl_loss(t_logit,z)
+                '''
+                
             else:
                 t_logit = torch.zeros(args.batch_size,args.num_classes).to(device)
                 for j in range(args.batch_size):
@@ -382,9 +394,19 @@ def main():
     #         correct += pred.eq(target.view_as(pred)).sum().item()
     # accuracy = 100. * correct / len(test_loader.dataset)
     # print('\nTeacher - Test set: Accuracy: {}/{} ({:.4f}%)\n'.format(correct, len(test_loader.dataset),accuracy))
+    
     assert args.num_classes in [400, 600], "Please enter correct num_classes"
     teacher = None
     if args.num_classes == 600:
+        try:
+            from movi_models import MoViNet
+            from movi_config import _C
+        except (ImportError, ModuleNotFoundError):
+            raise "MoViNet Import Error!!!"
+
+        teacher = MoViNet(_C.MODEL.MoViNetA2, causal=False, pretrained=True)
+        
+        ''' #prev tensorflow
         try:
             import tensorflow as tf
             import tensorflow_hub as hub
@@ -399,6 +421,7 @@ def main():
             teacher = tf.keras.Model(inputs, outputs, name='movinet')
         except (ImportError, ModuleNotFoundError):
             pass
+        '''
     else:
         try:
             from swintapi import SwinT
