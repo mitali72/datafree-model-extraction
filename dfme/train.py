@@ -98,11 +98,9 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             optimizer_S.zero_grad()
 
             # with torch.no_grad(): 
-            # converting pyotrch tensor to tf tensor
             if args.num_classes==600:
                 
                 '''fake => generator output'''
-
                 fake_min = torch.reshape(torch.amin(fake, dim=(1, 2, 3)), (fake.shape[0], 1, 1, 1, fake.shape[4]))
                 fake_max = torch.reshape(torch.amax(fake, axis=(1, 2, 3)), (fake.shape[0], 1, 1, 1, fake.shape[4]))
                 fake_norm = (fake + fake_min) / (fake_max - fake_min)
@@ -404,7 +402,7 @@ def main():
         except (ImportError, ModuleNotFoundError):
             raise "MoViNet Import Error!!!"
 
-        teacher = MoViNet(_C.MODEL.MoViNetA2, causal=False, pretrained=True)
+        teacher = MoViNet(_C.MODEL.MoViNetA2, causal=True, pretrained=True)
         
         ''' #prev tensorflow
         try:
@@ -439,8 +437,8 @@ def main():
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
     generator = network.gan.VideoGenerator(3,128,128,559-256,1)
     
-    generator = nn.DataParallel(generator)
-    student = nn.DataParallel(student)
+    generator = generator
+    student = student
     #device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     student = student.to(device)
     #device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")

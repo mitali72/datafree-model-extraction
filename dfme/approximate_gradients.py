@@ -52,36 +52,17 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             pts = evaluation_points[i * max_number_points: (i+1) * max_number_points]
             pts = pts.to(device)
 
-            # print("*"*10, pts.shape, "*"*10);
-            #changing pts to tf tensor
-            # print("*"*10, pts.shape, "*"*10)
             if num_classes == 600:
-                try:
-                    import tensorflow as tf
-                    import tensorflow_hub as hub
-                    from functions import tf_to_torch, torch_to_tf
-                except (ImportError, ModuleNotFoundError):
-                    pass
-                pts_tf = torch_to_tf(pts)
-
-                # print(pts_tf.shape)
-                # print(tf.reduce_min(pts_tf,axis = [1,2,3]).shape)
-                pts_min = tf.reshape(tf.reduce_min(pts_tf,axis = [1,2,3]),[pts_tf.shape[0],1,1,1,C])
-                pts_max = tf.reshape(tf.reduce_min(pts_tf,axis = [1,2,3]),[pts_tf.shape[0],1,1,1,C])
-                pts_tf = (pts_tf+ pts_min)/(pts_max-pts_min)
-
-                pred_victim_pts_tf = victim_model(pts_tf)
-
-                #changing to pytorch tensor
-                pred_victim_pts = tf_to_torch(pred_victim_pts_tf)
-                pred_victim_pts = pred_victim_pts.to(device)
+                pts_min = torch.reshape(torch.amin(pts, dim=(1, 2, 3)), (pts.shape[0], 1, 1, 1, pts.shape[4]))
+                pts_max = torch.reshape(torch.amax(pts, axis=(1, 2, 3)), (pts.shape[0], 1, 1, 1, pts.shape[4]))
+                pts_norm = (pts + pts_min) / (pts_max - pts_min)
+                pts = (pts+ pts_min)/(pts_max-pts_min)
+                pred_victim_pts = victim_model(pts)
             else:
                 pseudo_batch_size = pts.shape[0]
                 pred_victim_pts = torch.zeros(pseudo_batch_size,num_classes).to(device)
                 for j in range(pseudo_batch_size):
                     pred_victim_pts[j] = victim_model(pts[j].unsqueeze(0)).to(device)
-
-                
 
             # pred_victim_pts = torch.tensor(pred_victim_pts_tf.numpy())
             #**********************
@@ -156,23 +137,13 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
     if pre_x:
         x_ = args.G_activation(x_)
 
-    #changing x_ to tf tensor
     if args.num_classes == 600:
-        try:
-            from functions import tf_to_torch, torch_to_tf
-            x_tf = torch_to_tf(x_)
-
-            x_tfmin = tf.reshape(tf.reduce_min(x_tf,axis = [1,2,3]),[x_tf.shape[0],1,1,1,x_tf.shape[4]])
-            x_tfmax = tf.reshape(tf.reduce_max(x_tf,axis = [1,2,3]),[x_tf.shape[0],1,1,1,x_tf.shape[4]])
-            x_tf = (x_tf+ x_tfmin)/(x_tfmax-x_tfmin)
-
-            
-            pred_victim_tf = victim_model(x_tf)
-            #changing to pytorch tensor
-            pred_victim = tf_to_torch(pred_victim_tf)
-            pred_victim = pred_victim.to(device)
-        except (ImportError, ModuleNotFoundError):
-            raise ImportError("ERROR!!!")
+        pts = x_
+        pts_min = torch.reshape(torch.amin(pts, dim=(1, 2, 3)), (pts.shape[0], 1, 1, 1, pts.shape[4]))
+        pts_max = torch.reshape(torch.amax(pts, axis=(1, 2, 3)), (pts.shape[0], 1, 1, 1, pts.shape[4]))
+        pts_norm = (pts + pts_min) / (pts_max - pts_min)
+        pts = (pts+ pts_min)/(pts_max-pts_min)
+        pred_victim = victim_model(pts)
     else:
         pred_victim_pts = torch.zeros(N,args.num_classes).to(device)
         for i in range(N):
