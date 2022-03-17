@@ -397,8 +397,8 @@ def main():
     teacher = None
     if args.num_classes == 600:
         try:
-            from movi_models import MoViNet
-            from movi_config import _C
+            from movinets import MoViNet
+            from movinets.config import _C
         except (ImportError, ModuleNotFoundError):
             raise "MoViNet Import Error!!!"
 
