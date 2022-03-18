@@ -16,7 +16,7 @@ from einops import rearrange
 
 import logging
 from mmcv.utils import get_logger
-from mmcv.runner import load_checkpoint
+# from mmcv.runner import load_checkpoint
 
 
 def get_root_logger(log_file=None, log_level=logging.INFO):
@@ -638,7 +638,7 @@ class SwinTransformer3D(nn.Module):
             elif isinstance(m, nn.LayerNorm):
                 nn.init.constant_(m.bias, 0)
                 nn.init.constant_(m.weight, 1.0)
-
+        '''
         if pretrained:
             self.pretrained = pretrained
         if isinstance(self.pretrained, str):
@@ -656,7 +656,9 @@ class SwinTransformer3D(nn.Module):
             self.apply(_init_weights)
         else:
             raise TypeError('pretrained must be a str or None')
-
+        '''
+        self.apply(_init_weights)
+        
     def forward(self, x):
         """Forward function."""
         x = self.patch_embed(x)
