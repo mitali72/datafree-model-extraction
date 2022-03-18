@@ -421,12 +421,12 @@ def main():
             pass
         '''
     else:
-        try:
-            from swin_transformer_api import SwinT_Kinetics
-            teacher = SwinT_Kinetics()
-            teacher.load_state_dict(torch.load('swint_final_weights.pt'))
-            teacher.to(device)
-            teacher.eval()
+        # try:
+        from swin_transformer_api import SwinT_Kinetics
+        teacher = SwinT_Kinetics()
+        teacher.load_state_dict(torch.load('swint_final_weights.pt'))
+        teacher.to(device)
+        teacher.eval()
         # except ImportError:
         #    pass
 
