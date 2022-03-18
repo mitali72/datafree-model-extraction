@@ -57,7 +57,7 @@ def generator_loss(args, s_logit, t_logit,  z = None, z_logit = None, reduction=
 def train(args, teacher, student, generator, device, optimizer, epoch, best_loss_prev):
     """Main Loop for one epoch of Training Generator and Student"""
     global file
-    # teacher.eval()
+    teacher.eval()
     student.train()
     
     optimizer_S,  optimizer_G = optimizer
@@ -409,7 +409,7 @@ def main():
             raise "MoViNet Import Error!!!"
 
         teacher = MoViNet(_C.MODEL.MoViNetA2, causal=True, pretrained=True)
-        
+        teacher.eval()
         ''' #prev tensorflow
         try:
             import tensorflow as tf
@@ -427,11 +427,20 @@ def main():
             pass
         '''
     else:
-        try:
-            from swintapi import SwinT
-            teacher = SwinT(device)
-        except ImportError:
-            pass
+        # try:
+        print('1')
+        from swin_transformer_api import SwinT_Kinetics
+        print('2')
+        teacher = SwinT_Kinetics()
+        print('3')
+        teacher.load_state_dict(torch.load('swint_final_weights.pt'))
+        print('4')
+        teacher.to(device)
+        print('5')
+        teacher.eval()
+        print('6')
+        # except ImportError:
+        #    pass
 
     assert teacher is not None, "Please use the correct environment"
 

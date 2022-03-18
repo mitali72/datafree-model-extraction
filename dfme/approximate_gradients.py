@@ -20,7 +20,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
         raise ValueError(args.G_activation)
 
     clone_model.eval()
-    # victim_model.eval()
+    victim_model.eval()
     with torch.no_grad():
         # Sample unit noise vector
         N = x.size(0)
@@ -128,7 +128,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
 def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cpu"):
     if pre_x and args.G_activation is None:
         raise ValueError(args.G_activation)
-
+    
     clone_model.eval()
     N = x.size(0)
     x_copy = x.clone().detach().requires_grad_(True)
