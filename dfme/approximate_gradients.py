@@ -57,7 +57,8 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 pts_max = torch.reshape(torch.amax(pts, axis=(1, 2, 3)), (pts.shape[0], 1, 1, 1, pts.shape[4]))
                 pts_norm = (pts + pts_min) / (pts_max - pts_min)
                 pts = (pts+ pts_min)/(pts_max-pts_min)
-                pred_victim_pts = victim_model(pts)
+                victim_model.clean_activation_buffers()
+                pred_victim = victim_model(pts.permute(0,2,1,3,4).to(device))
             else:
                 pseudo_batch_size = pts.shape[0]
                 pred_victim_pts = torch.zeros(pseudo_batch_size,num_classes).to(device)
@@ -143,7 +144,8 @@ def compute_gradient(args, victim_model, clone_model, x, pre_x=False, device="cp
         pts_max = torch.reshape(torch.amax(pts, axis=(1, 2, 3)), (pts.shape[0], 1, 1, 1, pts.shape[4]))
         pts_norm = (pts + pts_min) / (pts_max - pts_min)
         pts = (pts+ pts_min)/(pts_max-pts_min)
-        pred_victim = victim_model(pts)
+        victim_model.clean_activation_buffers()
+        pred_victim = victim_model(pts.permute(0,2,1,3,4).to(device))
     else:
         pred_victim_pts = torch.zeros(N,args.num_classes).to(device)
         for i in range(N):

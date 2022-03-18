@@ -54,7 +54,7 @@ def generator_loss(args, s_logit, t_logit,  z = None, z_logit = None, reduction=
     return loss
 
 
-def train(args, teacher, student, generator, device, optimizer, epoch):
+def train(args, teacher, student, generator, device, optimizer, epoch, best_loss_prev):
     """Main Loop for one epoch of Training Generator and Student"""
     global file
     # teacher.eval()
@@ -65,7 +65,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
     #optimGScheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer_G, gamma=decayRate)
     gradients = []
     # kl_loss = nn.KLDivLoss(reduction="batchmean")
-
+    best_loss = best_loss_prev
     for i in range(args.epoch_itrs):
         """Repeat epoch_itrs times per epoch"""
         for _ in range(args.g_iter):
@@ -151,6 +151,12 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
             loss_S = student_loss(args, s_logit, t_logit)#+teacher_loss
             loss_S.backward()
             optimizer_S.step()
+            if loss_S.item() < best_loss:
+                best_loss = loss_S.item()
+                name = 'resnet34_8x'
+                torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}.pt")
+                torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}-generator.pt")
+
 
         # Log Results
         if i % args.log_interval == 0:
@@ -173,8 +179,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch):
         args.query_budget -= args.cost_per_iteration
 
         if args.query_budget < args.cost_per_iteration:
-            return 
-
+            return best_loss
+    return best_loss
 
 def test(args, student = None, generator = None, device = "cuda", test_loader = None, epoch=0):
     global file
@@ -506,7 +512,7 @@ def main():
         scheduler_G = optim.lr_scheduler.CosineAnnealingLR(optimizer_G, number_epochs)
 
 
-    best_acc = 0
+    best_loss = 1
     acc_list = []
     acc = 0
     for epoch in range(1, number_epochs + 1):
@@ -516,16 +522,16 @@ def main():
             scheduler_G.step()
         
 
-        train(args, teacher=teacher, student=student, generator=generator, device=device, optimizer=[optimizer_S, optimizer_G], epoch=epoch)
+        best_loss = train(args, teacher=teacher, student=student, generator=generator, device=device, optimizer=[optimizer_S, optimizer_G], epoch=epoch, best_loss_prev=best_loss)
         # Test
         # acc = test(args, student=student, generator=generator, device = device, test_loader = test_loader, epoch=epoch)
         # acc_list.append(acc)
-        if acc>best_acc:
-            best_acc = acc
-            name = 'resnet34_8x'
-            torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}.pt")
-            torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}-generator.pt")
-        # vp.add_scalar('Acc', epoch, acc)
+        # if acc>best_acc:
+        #     best_acc = acc
+        #     name = 'resnet34_8x'
+        #     torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}.pt")
+        #     torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}-generator.pt")
+        # # vp.add_scalar('Acc', epoch, acc)
         if args.store_checkpoints:
             torch.save(student.state_dict(), args.log_dir + f"/checkpoint/student.pt")
             torch.save(generator.state_dict(), args.log_dir + f"/checkpoint/generator.pt")
