@@ -427,8 +427,8 @@ def main():
             teacher.load_state_dict(torch.load('swint_final_weights.pt'))
             teacher.to(device)
             teacher.eval()
-        except ImportError:
-            pass
+        # except ImportError:
+        #    pass
 
     assert teacher is not None, "Please use the correct environment"
 
