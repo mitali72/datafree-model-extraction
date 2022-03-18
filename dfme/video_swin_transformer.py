@@ -15,7 +15,7 @@ from operator import mul
 from einops import rearrange
 
 import logging
-from mmcv.utils import get_logger
+# from mmcv.utils import get_logger
 # from mmcv.runner import load_checkpoint
 
 
