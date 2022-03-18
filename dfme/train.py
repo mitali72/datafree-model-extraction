@@ -422,8 +422,9 @@ def main():
         '''
     else:
         try:
-            from swintapi import SwinT
-            teacher = SwinT(device)
+            from swin_transformer_api import SwinT_Kinetics
+            teacher = SwinT_Kinetics()
+            teacher.load_state_dict(torch.load('swint_final_weights.pt'))
         except ImportError:
             pass
 
