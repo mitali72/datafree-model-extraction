@@ -1,5 +1,7 @@
 from __future__ import print_function
 import argparse, ipdb, json
+
+from parso import parse
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -70,12 +72,13 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
         """Repeat epoch_itrs times per epoch"""
         for _ in range(args.g_iter):
             #Sample Random Noise
-            z = torch.randn((args.batch_size, args.nz)).to(device)
+            z = args.batch_size#torch.randn((args.batch_size, args.nz)).to(device)
             #print(z.shape)
             optimizer_G.zero_grad()
             generator.train()
             #Get fake image from generator
-            fake = generator.sample_videos(z, pre_x=args.approx_grad) # pre_x returns the output of G before applying the activation
+            # print("Shape of z:\n", z.shape)
+            fake = generator.sample_videos(z, pre_x=args.approx_grad).to(device) # pre_x returns the output of G before applying the activation
             # fake = fake.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
             #print(z.shape, fake.shape)
             #pdb.set_trace()
@@ -84,8 +87,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
                                                 epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, 
                                                 device=device, pre_x=True)
 
-            loss_G.backward()
-            # fake.backward(approx_grad_wrt_x)
+            #loss_G.backward()
+            fake.backward(approx_grad_wrt_x.to(device))
                 
             optimizer_G.step()
 
@@ -93,8 +96,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
                 x_true_grad = measure_true_grad_norm(args, fake)
             
         for _ in range(args.d_iter):
-            z = torch.randn((args.batch_size, args.nz)).to(device)
-            fake = generator(z).detach()
+            z = args.batch_size#torch.randn((args.batch_size, args.nz)).to(device)
+            fake = generator.sample_videos(z, pre_x=args.approx_grad).detach()
             optimizer_S.zero_grad()
 
             # with torch.no_grad(): 
@@ -104,8 +107,9 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
                 fake_min = torch.reshape(torch.amin(fake, dim=(1, 2, 3)), (fake.shape[0], 1, 1, 1, fake.shape[4]))
                 fake_max = torch.reshape(torch.amax(fake, axis=(1, 2, 3)), (fake.shape[0], 1, 1, 1, fake.shape[4]))
                 fake_norm = (fake + fake_min) / (fake_max - fake_min)
-
-                t_logit = teacher(fake_norm).to(device)
+                
+                teacher.clean_activation_buffers()
+                t_logit = teacher(fake_norm.permute(0,2,1,3,4)).to(device)
                 
                 ''' # prev tensorflow
                 try:
@@ -154,8 +158,8 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
             if loss_S.item() < best_loss:
                 best_loss = loss_S.item()
                 name = 'resnet34_8x'
-                torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}.pt")
-                torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}-generator.pt")
+                torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.num_classes}-{name}.pt")
+                torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.num_classes}-{name}-generator.pt")
 
 
         # Log Results
@@ -226,7 +230,7 @@ def compute_grad_norms(generator, student):
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='DFAD CIFAR')
-    parser.add_argument('--batch_size', type=int, default=256, metavar='N',help='input batch size for training (default: 256)')
+    parser.add_argument('--batch_size', type=int, default=32, metavar='N',help='input batch size for training (default: 256)')
     parser.add_argument('--query_budget', type=float, default=20, metavar='N', help='Query budget for the extraction attack in millions (default: 20M)')
     parser.add_argument('--epoch_itrs', type=int, default=50)  
     parser.add_argument('--g_iter', type=int, default=1, help = "Number of generator iterations per epoch_iter")
@@ -234,7 +238,7 @@ def main():
 
     parser.add_argument('--lr_S', type=float, default=0.1, metavar='LR', help='Student learning rate (default: 0.1)')
     parser.add_argument('--lr_G', type=float, default=1e-4, help='Generator learning rate (default: 0.1)')
-    parser.add_argument('--nz', type=int, default=256, help = "Size of random noise input to generator")
+    parser.add_argument('--nz', type=int, default=559, help = "Size of random noise input to generator")
 
     parser.add_argument('--log_interval', type=int, default=10, metavar='N', help='how many batches to wait before logging training status')
     
@@ -260,7 +264,7 @@ def main():
     parser.add_argument('--model_id', type=str, default="debug")
 
     parser.add_argument('--device', type=int, default=0)
-    parser.add_argument('--log_dir', type=str, default="results")
+    parser.add_argument('--log_dir', type=str, default="save_results/cifar10")
 
     # Gradient approximation parameters
     parser.add_argument('--approx_grad', type=int, default=1, help = 'Always set to 1')
@@ -281,10 +285,11 @@ def main():
 
     parser.add_argument('--store_checkpoints', type=int, default=1)
 
-    parser.add_argument('--student_model', type=str, default='resnet50',
+    parser.add_argument('--student_model', type=str, default='stam',
                         help='Student model architecture (default: resnet18_8x)')
 
     parser.add_argument('--num_classes', type=int, default=600)
+    parser.add_argument('--cuda_num', type=int, default=0)
     args = parser.parse_args()
 
     args.dataset = args.num_classes
@@ -345,6 +350,7 @@ def main():
     torch.backends.cudnn.benchmark = False
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.cuda.set_device(args.cuda_num)
     #device = torch.device([torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())])
     #print(torch.cuda.device_count())
     #torch.device("cuda:%d"%args.device if use_cuda else "cpu")
@@ -408,7 +414,7 @@ def main():
         except (ImportError, ModuleNotFoundError):
             raise "MoViNet Import Error!!!"
 
-        teacher = MoViNet(_C.MODEL.MoViNetA2, causal=True, pretrained=True)
+        teacher = MoViNet(_C.MODEL.MoViNetA2, causal=True, pretrained=True).to(device)
         teacher.eval()
         ''' #prev tensorflow
         try:
@@ -450,14 +456,14 @@ def main():
     torch.cuda.empty_cache() 
     # generator = network.gan.GeneratorA(nz=args.nz, nc=3, img_size=32, activation=args.G_activation)
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
-    generator = network.gan.VideoGenerator(3,128,128,559-256,1)
+    device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+    generator = network.gan.VideoGenerator(n_channels=3, dim_z_content=79, dim_z_category=400,
+                                           dim_z_motion=80, video_length=10, device=device3)
     
-    generator = generator
-    student = student
-    #device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    student = student.to(device)
-    #device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
-    generator = generator.to(device)
+    device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    student = student.to(device2)
+    
+    generator = generator.to(device3)
     #teacher = teacher.to(device)
     #pdb.set_trace() 
     args.generator = generator

@@ -18,7 +18,8 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
     
     if pre_x and args.G_activation is None:
         raise ValueError(args.G_activation)
-
+    clone_model = clone_model.to(device)
+    victim_model = victim_model.to(device)
     clone_model.eval()
     victim_model.eval()
     with torch.no_grad():
@@ -58,7 +59,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
                 pts_norm = (pts + pts_min) / (pts_max - pts_min)
                 pts = (pts+ pts_min)/(pts_max-pts_min)
                 victim_model.clean_activation_buffers()
-                pred_victim = victim_model(pts.permute(0,2,1,3,4).to(device))
+                pred_victim_pts = victim_model(pts.permute(0,2,1,3,4).to(device)).to(device)
             else:
                 pseudo_batch_size = pts.shape[0]
                 pred_victim_pts = torch.zeros(pseudo_batch_size,num_classes).to(device)
@@ -69,6 +70,7 @@ def estimate_gradient_objective(args, victim_model, clone_model, x, epsilon = 1e
             #**********************
             # pts =torch.squeeze(pts)
             #**********************
+            
             pred_clone_pts = clone_model(pts)
 
             pred_victim.append(pred_victim_pts)

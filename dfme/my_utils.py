@@ -31,7 +31,7 @@ def get_classifier(classifier="x3d_m", pretrained=False, num_classes=400):
     elif classifier == "stam":
         model = STAM(
         dim = 512,
-        image_size = 224,     # size of image
+        image_size = 256,     # size of image
         patch_size = 32,      # patch size
         num_frames = 10,       # number of image frames, selected out of video
         space_depth = 12,     # depth of vision transformer

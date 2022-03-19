@@ -2,7 +2,7 @@ from turtle import forward
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import ipdb
+import pdb
 use_gpu = True if torch.cuda.is_available() else False
 
 import torch.nn.parallel
@@ -212,7 +212,7 @@ class GeneratorImageOurs(nn.Module):
         
 class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(3,a,b,c,video_length); a+b+c = 559
     def __init__(self, n_channels, dim_z_content, dim_z_category, dim_z_motion,
-                 video_length, ngf=64, activation=None):
+                 video_length, ngf=64, activation=None,device=None):
         super(VideoGenerator, self).__init__()
 
         self.n_channels = n_channels
@@ -222,7 +222,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         self.video_length = video_length
         self.activation = activation
         dim_z = dim_z_motion + dim_z_category + dim_z_content
-
+        self.device = device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
         self.recurrent = nn.GRUCell(dim_z_motion, dim_z_motion)
 
         self.model = torch.hub.load('facebookresearch/pytorch_GAN_zoo:hub',
@@ -253,11 +253,12 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         for frame_num in range(video_len):
             e_t = self.get_iteration_noise(num_samples)
-            h_t.append(self.recurrent(e_t, h_t[-1]))
+            h_t.append(self.recurrent(e_t.to(self.device), h_t[-1].to(self.device)))
 
         z_m_t = [h_k.view(-1, 1, self.dim_z_motion) for h_k in h_t]
+        
         z_m = torch.cat(z_m_t[1:], dim=1).view(-1, self.dim_z_motion)
-
+        
         return z_m
 
     def sample_z_categ(self, num_samples, video_len):
@@ -266,7 +267,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         if self.dim_z_category <= 0:
             return None, np.zeros(num_samples)
         # num samples (int), num_samples.shape=[1,559]
-        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        n_samples = num_samples#.detach().cpu().numpy().shape[0]
         # b = num_samples.detach().cpu().numpy().shape[1]
 
         classes_to_generate = np.random.randint(self.dim_z_category, size=(n_samples))
@@ -286,7 +287,7 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         
         # num samples (int), num_samples.shape=[1,559]
-        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        n_samples = num_samples#.detach().cpu().numpy().shape[0]
         content = np.random.normal(0, 1, (n_samples, self.dim_z_content)).astype(np.float32)
         
         content = np.repeat(content, video_len, axis=0)
@@ -296,11 +297,14 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         return Variable(content)
 
     def sample_z_video(self, num_samples, video_len=None):
-        z_content = self.sample_z_content(num_samples, video_len)
+        z_content = self.sample_z_content(num_samples, video_len).to(self.device)
         z_category, z_category_labels = self.sample_z_categ(num_samples, video_len)
-        z_motion = self.sample_z_m(num_samples, video_len)
-
+        z_category = z_category.to(self.device)
+        z_motion = self.sample_z_m(num_samples, video_len).to(self.device)
+        
+        
         if z_category is not None:
+            
             z = torch.cat([z_content, z_category, z_motion], dim=1)
         else:
             z = torch.cat([z_content, z_motion], dim=1)
@@ -311,7 +315,8 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
         video_len = video_len if video_len is not None else self.video_length
 
         z, z_category_labels = self.sample_z_video(num_samples, video_len)
-
+        
+        
         h = self.modelG(z.view(z.size(0), z.size(1), 1, 1))
         h = h.view(h.size(0) // video_len, video_len, self.n_channels, h.size(3), h.size(3))
 
@@ -319,8 +324,9 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
         if torch.cuda.is_available():
             z_category_labels = z_category_labels.cuda()
-
-        h = h.permute(0, 2, 1, 3, 4)
+        
+        # h = h.permute(0, 2, 1, 3, 4)
+        
         if pre_x :
             return h
         else:
@@ -339,10 +345,10 @@ class VideoGenerator(nn.Module): #input intitialization: model = VideoGenerator(
 
     def get_gru_initial_state(self, num_samples):
         # num samples (int), num_samples.shape=[1,559]
-        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        n_samples = num_samples#.detach().cpu().numpy().shape[0]
         return Variable(T.FloatTensor(n_samples, self.dim_z_motion).normal_())
 
     def get_iteration_noise(self, num_samples):
         # num samples (int), num_samples.shape=[1,559]
-        n_samples = num_samples.detach().cpu().numpy().shape[1]
+        n_samples = num_samples#num_samples.detach().cpu().numpy().shape[1]
         return Variable(T.FloatTensor(n_samples, self.dim_z_motion).normal_())
