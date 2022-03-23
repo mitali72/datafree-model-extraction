@@ -502,20 +502,14 @@ def main():
             pass
         '''
     else:
-        # try:
-        #print('1')
-        from swin_transformer_api import SwinT_Kinetics
-        #print('2')
-        teacher = SwinT_Kinetics()
-        #print('3')
-        teacher.load_state_dict(torch.load('swint_final_weights.pt'))
-        #print('4')
-        teacher.to(device)
-        #print('5')
-        teacher.eval()
-        #print('6')
-        # except ImportError:
-        #    pass
+        try:       
+            from swin_transformer_api import SwinT_Kinetics        
+            teacher = SwinT_Kinetics()        
+            teacher.load_state_dict(torch.load('swint_final_weights.pt'))        
+            teacher.to(device)        
+            teacher.eval()      
+        except ImportError:
+            pass
 
     assert teacher is not None, "Please use the correct environment"
 
