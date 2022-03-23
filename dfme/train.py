@@ -13,8 +13,9 @@ import numpy as np
 import torchvision
 from pprint import pprint
 from time import time
+import copy
 
-from approximate_gradients import *
+from approximate_gradients_copy import *
 
 import torchvision.models as models
 from my_utils import *
@@ -36,8 +37,8 @@ def student_loss(args, s_logit, t_logit, return_t_logits=False):
         loss = loss_fn(s_logit, t_logit.detach())
     elif args.loss == "kl":
         loss_fn = F.kl_div
-        s_logit = F.log_softmax(s_logit, dim=1)
-        t_logit = F.softmax(t_logit, dim=1)
+        s_logit = F.log_softmax(s_logit, dim=-1)
+        t_logit = F.softmax(t_logit, dim=-1)
         loss = loss_fn(s_logit, t_logit.detach(), reduction="batchmean")
     else:
         raise ValueError(args.loss)
@@ -56,14 +57,15 @@ def generator_loss(args, s_logit, t_logit,  z = None, z_logit = None, reduction=
     return loss
 
 
-def train(args, teacher, student, generator, device, optimizer, epoch, best_loss_prev):
+def train(args, teacher, student, student2, generator, device, optimizer, epoch, best_loss_prev, number_epochs, info_loss_coef = 0):
     """Main Loop for one epoch of Training Generator and Student"""
     global file
     teacher.eval()
     student.train()
-    
-    optimizer_S,  optimizer_G = optimizer
-    decayRate = 0.96
+    student2.train()
+
+    optimizer_S, optimizer_S2,  optimizer_G, optimizer_RNN = optimizer
+    #decayRate = 0.96
     #optimGScheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer_G, gamma=decayRate)
     gradients = []
     # kl_loss = nn.KLDivLoss(reduction="batchmean")
@@ -74,31 +76,72 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
             #Sample Random Noise
             z = args.batch_size#torch.randn((args.batch_size, args.nz)).to(device)
             #print(z.shape)
-            optimizer_G.zero_grad()
+            #optimizer_G.zero_grad()
+            optimizer_RNN.zero_grad()
             generator.train()
             #Get fake image from generator
             # print("Shape of z:\n", z.shape)
-            fake = generator.sample_videos(z, pre_x=args.approx_grad).to(device) # pre_x returns the output of G before applying the activation
-            # fake = fake.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
+            fake, fake_labels, fake_labels_ohe = generator.sample_videos(z, pre_x=args.approx_grad)
+            fake.to(device) # pre_x returns the output of G before applying the activation
+            #fake_2, xyz =  generator.sample_images(z)
+            #fake_2 = fake_2.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
+            #fake_2.to(device) # pre_x returns the output of G before applying the activation
             #print(z.shape, fake.shape)
             #pdb.set_trace()
-            ## APPOX GRADIENT
-            approx_grad_wrt_x, loss_G = estimate_gradient_objective(args, teacher, student, fake, 
-                                                epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, 
-                                                device=device, pre_x=True)
-
-            #loss_G.backward()
+            #print(fake_labels.size())
+            #print(fake_labels_ohe.size())
+            ## APPROX GRADIENT
+            approx_grad_wrt_x, loss_G = estimate_gradient_objective(args, teacher, student, fake, fake_labels_ohe, epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, device=device, pre_x=True, lambd = info_loss_coef)
             fake.backward(approx_grad_wrt_x.to(device))
-                
+            optimizer_RNN.step()
+
+            #approx_grad_wrt_x_2, loss_G_2 = estimate_gradient_objective(args, teacher, student2, fake_2, fake_labels_ohe, epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, device=device, pre_x=True, lambd = 0)
+            #fake_2.backward(approx_grad_wrt_x_2.to(device))
+            #optimizer_G.step()
+
+            if i == 0 and args.rec_grad_norm:
+                x_true_grad = measure_true_grad_norm(args, fake)
+
+        for _ in range(args.g_iter):
+            #Sample Random Noise
+            z = args.batch_size#torch.randn((args.batch_size, args.nz)).to(device)
+            #print(z.shape)
+            optimizer_G.zero_grad()
+            #optimizer_RNN.zero_grad()
+            generator.train()
+            #Get fake image from generator
+            # print("Shape of z:\n", z.shape)
+            #fake, fake_labels, fake_labels_ohe = generator.sample_videos(z, pre_x=args.approx_grad)
+            #fake.to(device) # pre_x returns the output of G before applying the activation
+            fake_2, xyz =  generator.sample_images(z)
+            fake_2 = fake_2.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
+            fake_2.to(device) # pre_x returns the output of G before applying the activation
+            #print(z.shape, fake.shape)
+            #pdb.set_trace()
+            #print(fake_labels.size())
+            #print(fake_labels_ohe.size())
+            ## APPROX GRADIENT
+            #approx_grad_wrt_x, loss_G = estimate_gradient_objective(args, teacher, student, fake, fake_labels_ohe, epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, device=device, pre_x=True, lambd = info_loss_coef)
+            #fake.backward(approx_grad_wrt_x.to(device))
+            #optimizer_RNN.step()
+
+            approx_grad_wrt_x_2, loss_G_2 = estimate_gradient_objective(args, teacher, student2, fake_2, fake_labels_ohe, epsilon = args.grad_epsilon, m = args.grad_m, num_classes=args.num_classes, device=device, pre_x=True, lambd = 0)
+            fake_2.backward(approx_grad_wrt_x_2.to(device))
             optimizer_G.step()
 
             if i == 0 and args.rec_grad_norm:
                 x_true_grad = measure_true_grad_norm(args, fake)
-            
-        for _ in range(args.d_iter):
+
+        for _, _ in enumerate(range(args.d_iter)):
             z = args.batch_size#torch.randn((args.batch_size, args.nz)).to(device)
-            fake = generator.sample_videos(z, pre_x=args.approx_grad).detach()
+            #if i%2==0:
+            fake, xyz, abcc = generator.sample_videos(z, pre_x=args.approx_grad)
+            #else:
+            fake_img, xyz  = generator.sample_images(z)
+            fake.detach()
+            fake_img.detach()
             optimizer_S.zero_grad()
+            optimizer_S2.zero_grad()
 
             # with torch.no_grad(): 
             if args.num_classes==600:
@@ -111,6 +154,14 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
                 teacher.clean_activation_buffers()
                 t_logit = teacher(fake_norm.permute(0,2,1,3,4)).to(device)
                 
+                fake_min_img = torch.reshape(torch.amin(fake_img, dim=(1, 2, 3)), (fake_img.shape[0], 1, 1, 1, fake_img.shape[4]))
+                fake_max_img = torch.reshape(torch.amax(fake_img, axis=(1, 2, 3)), (fake_img.shape[0], 1, 1, 1, fake_img.shape[4]))
+                fake_norm_img = (fake_img + fake_min_img) / (fake_max_img - fake_min_img)
+                
+                teacher.clean_activation_buffers()
+                t_logit_img = teacher(fake_norm_img.permute(0,2,1,3,4)).to(device)
+                
+
                 ''' # prev tensorflow
                 try:
                     from functions import tf_to_torch, torch_to_tf                  
@@ -136,35 +187,51 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
                 '''
                 
             else:
-                t_logit = torch.zeros(args.batch_size,args.num_classes).to(device)
-                for j in range(args.batch_size):
-                    t_logit[j] = teacher(fake[j].unsqueeze(0)).to(device)
+                t_logit = teacher(fake.permute(0,2,1,3,4)).to(device)
+                t_logit_img = teacher(fake_img.permute(0,2,1,3,4)).to(device)
                 # t_logit = teacher(fake)
+
+
             # Correction for the fake logits
             if args.loss == "l1" and args.no_logits:
                 t_logit = F.log_softmax(t_logit, dim=1).detach()
+                t_logit_img = F.log_softmax(t_logit_img, dim=1).detach()
                 if args.logit_correction == 'min':
                     t_logit -= t_logit.min(dim=1).values.view(-1, 1).detach()
+                    t_logit_img -= t_logit_img.min(dim=1).values.view(-1, 1).detach()
                 elif args.logit_correction == 'mean':
                     t_logit -= t_logit.mean(dim=1).view(-1, 1).detach()
+                    t_logit_img -= t_logit_img.mean(dim=1).view(-1, 1).detach()
 
             # fake= fake.repeat(1, 10, 1, 1, 1) #add repeat to image to get video
-            s_logit = student(fake)
-
-
+        
+            # print(torch.argmax(s_logit, 1))
+            fake_img = fake_img.repeat((1,10,1,1,1))
+            s_logit = student(fake)#.permute(0,2,1,3,4))
+            s_logit_img = student2(fake_img)#.permute(0,2,1,3,4))
+            
             loss_S = student_loss(args, s_logit, t_logit)#+teacher_loss
+            loss_S_img = student_loss(args, s_logit_img, t_logit_img)#+teacher_loss
+
             loss_S.backward()
+            loss_S_img.backward()
+
+            # print('before S2 opt')
+            optimizer_S2.step()
+            # print('after S2 opt, before S opt')
             optimizer_S.step()
+            # print('after S opt')
+
             if loss_S.item() < best_loss:
                 best_loss = loss_S.item()
                 name = 'resnet34_8x'
-                torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.num_classes}-{name}.pt")
-                torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.num_classes}-{name}-generator.pt")
+                torch.save(student.state_dict(),f"checkpoint/student_{args.model_id}/{args.num_classes}-{name}-{args.epoch_itrs}-{info_loss_coef}.pt")
+                torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.num_classes}-{name}-{args.epoch_itrs}-{info_loss_coef}-generator.pt")
 
 
         # Log Results
         if i % args.log_interval == 0:
-            myprint(f'Train Epoch: {epoch} [{i}/{args.epoch_itrs} ({100*float(i)/float(args.epoch_itrs):.0f}%)]\tG_Loss: {loss_G.item():.6f} S_loss: {loss_S.item():.6f}')
+            print(f'Train Epoch: {epoch}/{number_epochs} [{i}/{args.epoch_itrs} ({100*float(i)/float(args.epoch_itrs):.0f}%)]\tG_Loss: {loss_G.item():.6f} S_loss: {loss_S.item():.6f}')
             
             if i == 0:
                 with open(args.log_dir + "/loss.csv", "a") as f:
@@ -184,6 +251,7 @@ def train(args, teacher, student, generator, device, optimizer, epoch, best_loss
 
         if args.query_budget < args.cost_per_iteration:
             return best_loss
+
     return best_loss
 
 def test(args, student = None, generator = None, device = "cuda", test_loader = None, epoch=0):
@@ -236,6 +304,7 @@ def main():
     parser.add_argument('--g_iter', type=int, default=1, help = "Number of generator iterations per epoch_iter")
     parser.add_argument('--d_iter', type=int, default=5, help = "Number of discriminator iterations per epoch_iter")
 
+    parser.add_argument('--lambd', type=float, default=0, metavar='lmbd', help='Generator Info Loss Coefficient(default: 0)')
     parser.add_argument('--lr_S', type=float, default=0.1, metavar='LR', help='Student learning rate (default: 0.1)')
     parser.add_argument('--lr_G', type=float, default=1e-4, help='Generator learning rate (default: 0.1)')
     parser.add_argument('--nz', type=int, default=559, help = "Size of random noise input to generator")
@@ -255,9 +324,9 @@ def main():
                         help='SGD momentum (default: 0.9)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
-    parser.add_argument('--seed', type=int, default=random.randint(0, 100000), metavar='S',
+    parser.add_argument('--seed', type=int, default=69, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--ckpt', type=str, default='checkpoint/teacher/cifar10-resnet34_8x.pt')
+    parser.add_argument('--ckpt', type=str, default=None)#'checkpoint/teacher/cifar10-resnet34_8x.pt')
     
 
     parser.add_argument('--student_load_path', type=str, default=None)
@@ -321,7 +390,7 @@ def main():
 
     if args.store_checkpoints:
         os.makedirs(args.log_dir + "/checkpoint", exist_ok=True)
-
+    torch.autograd.set_detect_anomaly(True)
     
     # Save JSON with parameters
     with open(args.log_dir + "/parameters.json", "w") as f:
@@ -434,17 +503,17 @@ def main():
         '''
     else:
         # try:
-        print('1')
+        #print('1')
         from swin_transformer_api import SwinT_Kinetics
-        print('2')
+        #print('2')
         teacher = SwinT_Kinetics()
-        print('3')
+        #print('3')
         teacher.load_state_dict(torch.load('swint_final_weights.pt'))
-        print('4')
+        #print('4')
         teacher.to(device)
-        print('5')
+        #print('5')
         teacher.eval()
-        print('6')
+        #print('6')
         # except ImportError:
         #    pass
 
@@ -458,12 +527,13 @@ def main():
     # generator = network.gan.GeneratorImageOurs(activation=args.G_activation)
     device3 = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     generator = network.gan.VideoGenerator(n_channels=3, dim_z_content=79, dim_z_category=400,
-                                           dim_z_motion=80, video_length=10, device=device3)
+                                           dim_z_motion=80, video_length=10, device=device)
     
     device2 = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    student = student.to(device2)
+
+    student = student.to(device)
     
-    generator = generator.to(device3)
+    generator = generator.to(device)
     #teacher = teacher.to(device)
     #pdb.set_trace() 
     args.generator = generator
@@ -486,7 +556,10 @@ def main():
     print ("Cost per iterations: ", args.cost_per_iteration)
     print ("Total number of epochs: ", number_epochs)
 
-    optimizer_S = optim.SGD( student.parameters(), lr=args.lr_S, weight_decay=args.weight_decay, momentum=0.9 )
+    student2 = copy.deepcopy(student)
+    student2 = student2.to(device)
+    optimizer_S = optim.SGD(student.parameters(), lr=args.lr_S, weight_decay=args.weight_decay, momentum=0.9 )
+    optimizer_S2 = optim.SGD(student2.parameters(), lr=args.lr_S, weight_decay=args.weight_decay, momentum=0.9 )
 
     if args.MAZE:
         optimizer_G = optim.SGD( generator.parameters(), lr=args.lr_G , weight_decay=args.weight_decay, momentum=0.9 )    
@@ -513,31 +586,45 @@ def main():
            {'params': generator.modelG.scaleLayers[5][0].parameters(), 'lr':1e-3 },
            {'params': generator.modelG.scaleLayers[5][1].parameters(), 'lr':1e-3 },
 
+           
         ], lr=default_lr)
 
-    steps = sorted([int(step * number_epochs) for step in args.steps])
+        optimizer_RNN = optim.AdamW([
+            {'params': generator.recurrent.parameters(), 'lr':1e-3 }
+        ])
+
+    lambd = args.lambd
+    steps = [4,8,10]#sorted([int(step * number_epochs) for step in args.steps])
     print("Learning rate scheduling at steps: ", steps)
     print()
 
     if args.scheduler == "multistep":
         scheduler_S = optim.lr_scheduler.MultiStepLR(optimizer_S, steps, args.scale)
+        scheduler_S2 = optim.lr_scheduler.MultiStepLR(optimizer_S2, steps, args.scale)
         scheduler_G = optim.lr_scheduler.MultiStepLR(optimizer_G, steps, args.scale)
+        scheduler_RNN = optim.lr_scheduler.MultiStepLR(optimizer_RNN, steps, args.scale)
+
     elif args.scheduler == "cosine":
         scheduler_S = optim.lr_scheduler.CosineAnnealingLR(optimizer_S, number_epochs)
+        scheduler_S2 = optim.lr_scheduler.CosineAnnealingLR(optimizer_S2, number_epochs)
         scheduler_G = optim.lr_scheduler.CosineAnnealingLR(optimizer_G, number_epochs)
+        scheduler_RNN = optim.lr_scheduler.CosineAnnealingLR(optimizer_RNN, number_epochs)
 
 
     best_loss = 1
     acc_list = []
-    acc = 0
-    for epoch in range(1, number_epochs + 1):
+    # best_acc = 0
+    from tqdm import tqdm
+    for epoch in tqdm(range(1, number_epochs + 1)):
         # Train
         if args.scheduler != "none":
             scheduler_S.step()
+            scheduler_S2.step()
             scheduler_G.step()
-        
+            scheduler_RNN.step()
 
-        best_loss = train(args, teacher=teacher, student=student, generator=generator, device=device, optimizer=[optimizer_S, optimizer_G], epoch=epoch, best_loss_prev=best_loss)
+        best_loss = train(args, teacher=teacher, student=student, student2=student2, generator=generator, device=device, optimizer=[optimizer_S,optimizer_S2, optimizer_G, optimizer_RNN], epoch=epoch, best_loss_prev=best_loss, number_epochs = number_epochs, info_loss_coef = lambd)
+
         # Test
         # acc = test(args, student=student, generator=generator, device = device, test_loader = test_loader, epoch=epoch)
         # acc_list.append(acc)
@@ -548,22 +635,44 @@ def main():
         #     torch.save(generator.state_dict(),f"checkpoint/student_{args.model_id}/{args.dataset}-{name}-generator.pt")
         # # vp.add_scalar('Acc', epoch, acc)
         if args.store_checkpoints:
-            torch.save(student.state_dict(), args.log_dir + f"/checkpoint/student.pt")
-            torch.save(generator.state_dict(), args.log_dir + f"/checkpoint/generator.pt")
-    myprint("Best Acc=%.6f"%best_acc)
+            torch.save(student.state_dict(), args.log_dir + f"/checkpoint/student-new-{epoch}.pt")
+            torch.save(student2.state_dict(), args.log_dir + f"/checkpoint/student2-new-{epoch}.pt")
+            torch.save(generator.state_dict(), args.log_dir + f"/checkpoint/generator-new-{epoch}.pt")
+    # myprint("Best Acc=%.6f"%best_acc)
 
-    with open(args.log_dir + "/Max_accuracy = %f"%best_acc, "w") as f:
-        f.write(" ")
+    # with open(args.log_dir + "/Max_accuracy = %f"%best_acc, "w") as f:
+    #     f.write(" ")
 
      
 
-    import csv
-    os.makedirs('log', exist_ok=True)
-    with open('log/DFAD-%s.csv'%(args.dataset), 'a') as f:
-        writer = csv.writer(f)
-        writer.writerow(acc_list)
+    # import csv
+    # os.makedirs('log', exist_ok=True)
+    # with open('log/DFAD-%s.csv'%(args.dataset), 'a') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(acc_list)
 
 
 if __name__ == '__main__':
+    torch.random.manual_seed(69)
     main()
+    """
+    from swin_transformer_api import SwinT_Kinetics
+    teacher = SwinT_Kinetics()
+    student = get_classifier('stam', pretrained=False, num_classes=400)
+    generator = network.gan.VideoGenerator(n_channels=3, dim_z_content=79, dim_z_category=400,
+                                           dim_z_motion=80, video_length=10, device='cpu')
+
+    # Training settings
+    parser = argparse.ArgumentParser(description='DFAD CIFAR')
+    args = parser.parse_args()
+    args.G_activation = torch.tanh
+    args.loss = 'kl'
+    args.forward_differences = True
+
+    fake, fake_labels, fake_labels_ohe = generator.sample_videos(4, pre_x=1)
+    a, b = estimate_gradient_objective(args, teacher, student, fake, fake_labels_ohe, num_classes=400, pre_x=True)
+    """
+    print()
+
+
 
